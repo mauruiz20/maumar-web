@@ -6,7 +6,7 @@ import LangSwitch from './LangSwitch.astro';
 interface Props {
   content: Content;
 }
-const { hero, ui } = Astro.props.content;
+const { hero, ui, room } = Astro.props.content;
 const [first, middle, last] = PERSON.name.split(' ');
 ---
 
@@ -22,6 +22,7 @@ const [first, middle, last] = PERSON.name.split(' ');
   <div class="actions">
     <a class="cv" href={ui.cvHref} download type="application/pdf">{ui.downloadCv}</a>
     <LangSwitch lang={ui.otherLang.lang} href={ui.otherLang.href} label={ui.otherLang.heroLabel} class="other" />
+    <button type="button" id="room-enter" class="room-enter" hidden>{room.enter}</button>
   </div>
 </section>
 

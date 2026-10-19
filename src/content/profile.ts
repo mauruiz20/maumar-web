@@ -1,4 +1,5 @@
 import type { Lang } from '../lib/lang';
+import type { HotspotId } from '../room/hotspots';
 
 /** Facts that are the same in every language. */
 export const PERSON = {
@@ -90,6 +91,24 @@ export interface Contact {
   links: Link[];
 }
 
+/** Strings of the 3D room overlay. Its content comes from the sections above. */
+export interface RoomUi {
+  /** Button on the simple page that opens the room. */
+  enter: string;
+  /** Always-visible button that closes the room for good (saved as simple mode). */
+  exit: string;
+  /** Accessible name of the room region. */
+  label: string;
+  loading: string;
+  /** Returns the camera to the overview. */
+  back: string;
+  /** Name of the HTML list of clickable objects. */
+  menu: string;
+  lamp: string;
+  hint: string;
+  hotspots: Record<HotspotId, string>;
+}
+
 export interface Content {
   lang: Lang;
   meta: Meta;
@@ -100,4 +119,5 @@ export interface Content {
   skills: { title: string; groups: SkillGroup[] };
   education: Education;
   contact: Contact;
+  room: RoomUi;
 }

@@ -5,6 +5,8 @@ import type { Content } from '../content/profile';
 import { PERSON } from '../content/profile';
 import LangSwitch from '../components/LangSwitch.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
+import RoomGate from '../components/RoomGate.astro';
+import { GATE_SCRIPT } from '../lib/mode';
 
 interface Props {
   content: Content;
@@ -87,6 +89,7 @@ const langScript = `document.addEventListener('click',function(e){var a=e.target
 
     <link rel="preload" href={displayFont} as="font" type="font/woff2" crossorigin />
     <style is:inline set:html={fontFace} />
+    <script is:inline set:html={GATE_SCRIPT} />
     <script is:inline set:html={themeScript} />
     <script is:inline set:html={langScript} />
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
@@ -105,6 +108,7 @@ const langScript = `document.addEventListener('click',function(e){var a=e.target
     <footer class="wrap foot">
       <p class="meta">© {new Date().getFullYear()} {PERSON.name}. {ui.footer}</p>
     </footer>
+    <RoomGate content={content} />
   </body>
 </html>
 

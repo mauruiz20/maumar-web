@@ -164,4 +164,22 @@ export const es: Content = {
       { label: 'LinkedIn', href: PERSON.linkedin },
     ],
   },
+  room: {
+    enter: 'Ver la habitación 3D',
+    exit: 'Ver CV / modo simple',
+    label: 'Habitación 3D',
+    loading: 'Preparando la habitación…',
+    back: 'Volver',
+    menu: 'Objetos de la habitación',
+    lamp: 'Lámpara de escritorio',
+    hint: 'Hacé clic en un objeto o elegí uno de esta lista.',
+    hotspots: {
+      monitor: 'Monitor: experiencia',
+      bookshelf: 'Biblioteca: proyectos',
+      whiteboard: 'Pizarra: habilidades',
+      pi: 'Raspberry Pi: servidor casero',
+      phone: 'Teléfono: contacto y CV',
+      mug: 'Taza: formación',
+    },
+  },
 };

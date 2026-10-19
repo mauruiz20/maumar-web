@@ -167,6 +167,138 @@ a:hover {
   font-variant-numeric: tabular-nums;
 }
 
+/* 3D room gate: the overlay shell and its loading screen. The room's own UI ships in its chunk. */
+html[data-room] {
+  overflow: hidden;
+}
+
+.room-root {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.room-root[hidden] {
+  display: none;
+}
+
+/* The inline gate decided to start: cover the page from first paint. */
+html[data-room] .room-root[hidden] {
+  display: block;
+}
+
+.room-root:focus {
+  outline: none;
+}
+
+.room-host {
+  position: absolute;
+  inset: 0;
+}
+
+.room-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 1.25rem;
+  padding: var(--gutter);
+  background: var(--paper);
+  text-align: center;
+  transition: opacity 0.5s ease, visibility 0.5s;
+}
+
+.room-root[data-state='ready'] .room-loading {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.room-loading-text {
+  font-family: var(--display);
+  font-size: var(--step-2);
+}
+
+.room-loading-bar {
+  position: relative;
+  width: 10rem;
+  height: 2px;
+  overflow: hidden;
+  background: var(--rule);
+}
+
+.room-loading-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 35%;
+  background: var(--accent);
+  animation: room-load 1.4s ease-in-out infinite;
+}
+
+@keyframes room-load {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(290%);
+  }
+}
+
+.room-exit {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 60;
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--step--1);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.room-exit:hover {
+  border-color: var(--accent);
+}
+
+/* "View the 3D room", next to the hero links; shown by the gate only when WebGL works. */
+.room-enter {
+  min-height: 2.75rem;
+  padding: 0.6rem 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 0.22em;
+  cursor: pointer;
+}
+
+.room-enter[hidden] {
+  display: none;
+}
+
+.room-enter:hover {
+  text-decoration-thickness: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-loading-bar::after {
+    width: 100%;
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
