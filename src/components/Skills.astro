@@ -1,0 +1,40 @@
+---
+import type { Content } from '../content/profile';
+
+interface Props {
+  content: Content;
+}
+const { skills } = Astro.props.content;
+---
+
+<section class="section" aria-labelledby="skills">
+  <h2 id="skills">{skills.title}</h2>
+  <dl class="groups">
+    {
+      skills.groups.map((g) => (
+        <div class="group">
+          <dt>{g.name}</dt>
+          <dd>{g.items.join(', ')}</dd>
+        </div>
+      ))
+    }
+  </dl>
+</section>
+
+<style>
+  .group + .group {
+    margin-top: 1.25rem;
+  }
+
+  dt {
+    font-weight: 600;
+  }
+
+  @media (min-width: 40rem) {
+    .group {
+      display: grid;
+      grid-template-columns: 9.5rem 1fr;
+      gap: 1rem;
+    }
+  }
+</style>

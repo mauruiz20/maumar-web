@@ -1,0 +1,33 @@
+---
+import type { Content } from '../content/profile';
+
+interface Props {
+  content: Content;
+}
+const { education } = Astro.props.content;
+---
+
+<section class="section" aria-labelledby="education">
+  <h2 id="education">{education.title}</h2>
+  <h3>{education.degree}</h3>
+  <p class="school">{education.school}</p>
+  <p class="meta">{education.period}</p>
+  <p class="thesis">{education.thesis}</p>
+  <p class="languages">{education.languages}</p>
+</section>
+
+<style>
+  h3 {
+    font-size: var(--step-1);
+  }
+
+  .school {
+    margin-top: 0.25rem;
+    font-weight: 600;
+  }
+
+  .thesis,
+  .languages {
+    margin-top: 0.75rem;
+  }
+</style>

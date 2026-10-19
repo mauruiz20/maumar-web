@@ -1,0 +1,13 @@
+---
+import type { Lang } from '../lib/lang';
+
+interface Props {
+  lang: Lang;
+  href: string;
+  label: string;
+  class?: string;
+}
+const { lang, href, label, class: className } = Astro.props;
+---
+
+<a href={href} hreflang={lang} lang={lang} data-set-lang={lang} class={className}>{label}</a>

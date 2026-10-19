@@ -1,0 +1,94 @@
+---
+import type { Content } from '../content/profile';
+import { PERSON } from '../content/profile';
+import LangSwitch from './LangSwitch.astro';
+
+interface Props {
+  content: Content;
+}
+const { hero, ui } = Astro.props.content;
+const [first, middle, last] = PERSON.name.split(' ');
+---
+
+<section class="hero" aria-labelledby="name">
+  <h1 id="name" class="name">
+    <span>{first}</span>
+    <span>{middle}</span>
+    <span>{last}</span>
+  </h1>
+  <p class="role">{hero.role}</p>
+  <p class="intro">{hero.intro}</p>
+  <p class="meta availability">{hero.availability}</p>
+  <div class="actions">
+    <a class="cv" href={ui.cvHref} download type="application/pdf">{ui.downloadCv}</a>
+    <LangSwitch lang={ui.otherLang.lang} href={ui.otherLang.href} label={ui.otherLang.heroLabel} class="other" />
+  </div>
+</section>
+
+<style>
+  .hero {
+    padding-block: 2.5rem 1rem;
+  }
+
+  .name {
+    font-size: var(--step-hero);
+    line-height: 0.98;
+    letter-spacing: -0.02em;
+    text-wrap: initial;
+  }
+
+  .name span {
+    display: block;
+  }
+
+  /* The surname steps in: one deliberate offset, nothing else moves. */
+  .name span:last-child {
+    padding-left: 1.6em;
+  }
+
+  .role {
+    margin-top: 1.5rem;
+    font-family: var(--display);
+    font-size: var(--step-1);
+    line-height: 1.3;
+    text-wrap: balance;
+  }
+
+  .intro {
+    margin-top: 1rem;
+    max-width: 36rem;
+  }
+
+  .availability {
+    margin-top: 0.75rem;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .cv {
+    display: inline-flex;
+    align-items: center;
+    min-height: 3rem;
+    padding: 0 1.4rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .cv:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .other {
+    padding-block: 0.6rem;
+  }
+</style>

@@ -1,0 +1,19 @@
+---
+import Base from '../../layouts/Base.astro';
+import Hero from '../../components/Hero.astro';
+import Experience from '../../components/Experience.astro';
+import Projects from '../../components/Projects.astro';
+import Skills from '../../components/Skills.astro';
+import Education from '../../components/Education.astro';
+import Contact from '../../components/Contact.astro';
+import { es as content } from '../../content/es';
+---
+
+<Base content={content}>
+  <Hero content={content} />
+  <Experience content={content} />
+  <Projects content={content} />
+  <Skills content={content} />
+  <Education content={content} />
+  <Contact content={content} />
+</Base>

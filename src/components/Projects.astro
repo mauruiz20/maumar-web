@@ -1,0 +1,55 @@
+---
+import type { Content } from '../content/profile';
+
+interface Props {
+  content: Content;
+}
+const { projects } = Astro.props.content;
+---
+
+<section class="section" aria-labelledby="projects">
+  <h2 id="projects">{projects.title}</h2>
+  <p class="lede">{projects.intro}</p>
+  {
+    projects.items.map((p) => (
+      <article class="project" aria-labelledby={`project-${p.id}`}>
+        <h3 id={`project-${p.id}`}>{p.name}</h3>
+        <p class="summary">{p.summary}</p>
+        <ul class="list">
+          {p.details.map((d) => (
+            <li>{d}</li>
+          ))}
+        </ul>
+        <p class="meta stack">{p.stack.join(', ')}</p>
+        {p.link && (
+          <p class="link">
+            <a href={p.link.href}>{p.link.label}</a>
+          </p>
+        )}
+      </article>
+    ))
+  }
+</section>
+
+<style>
+  .project + .project {
+    margin-top: 2.25rem;
+  }
+
+  h3 {
+    font-size: var(--step-1);
+  }
+
+  .summary {
+    margin-block: 0.4rem 0.75rem;
+    font-size: 1.125rem;
+  }
+
+  .stack {
+    margin-top: 0.75rem;
+  }
+
+  .link {
+    margin-top: 0.4rem;
+  }
+</style>

@@ -1,0 +1,50 @@
+---
+import type { Content } from '../content/profile';
+import { PERSON } from '../content/profile';
+
+interface Props {
+  content: Content;
+}
+const { contact } = Astro.props.content;
+---
+
+<section class="section" aria-labelledby="contact">
+  <h2 id="contact">{contact.title}</h2>
+  <p>{contact.intro}</p>
+  <p class="email"><a href={`mailto:${PERSON.email}`}>{contact.emailLabel}</a></p>
+  <ul class="links">
+    {
+      contact.links.map((l) => (
+        <li>
+          <a href={l.href} rel="me">
+            {l.label}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+<style>
+  .email {
+    margin-top: 0.75rem;
+    font-family: var(--display);
+    font-size: clamp(1.25rem, 5.6vw, 1.75rem);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin-top: 1.25rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .links a {
+    display: inline-block;
+    padding-block: 0.4rem;
+  }
+</style>

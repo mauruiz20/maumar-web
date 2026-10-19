@@ -1,0 +1,138 @@
+---
+import '../styles/global.css';
+import displayFont from '@fontsource/young-serif/files/young-serif-latin-400-normal.woff2?url';
+import type { Content } from '../content/profile';
+import { PERSON } from '../content/profile';
+import LangSwitch from '../components/LangSwitch.astro';
+import ThemeToggle from '../components/ThemeToggle.astro';
+
+interface Props {
+  content: Content;
+}
+const { content } = Astro.props;
+const { meta, ui, lang } = content;
+
+const site = Astro.site ?? new URL(PERSON.site);
+const canonical = new URL(meta.path, site).href;
+const enUrl = new URL('/', site).href;
+const esUrl = new URL('/es/', site).href;
+const ogImage = new URL(meta.ogImage, site).href;
+const ogAltLocale = lang === 'en' ? 'es_AR' : 'en_US';
+
+const fontFace = `@font-face{font-family:'Young Serif';font-style:normal;font-weight:400;font-display:swap;src:url(${displayFont}) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}`;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: PERSON.name,
+  url: canonical,
+  image: ogImage,
+  jobTitle: content.hero.role,
+  email: `mailto:${PERSON.email}`,
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: PERSON.locality,
+    addressCountry: PERSON.country,
+  },
+  alumniOf: {
+    '@type': 'CollegeOrUniversity',
+    name: 'Universidad Nacional de Tucumán',
+  },
+  knowsLanguage: ['es', 'en'],
+  sameAs: [PERSON.github, PERSON.linkedin],
+};
+
+// Theme: apply the stored choice before first paint; the toggle flips and stores it.
+const themeScript = `(()=>{var d=document.documentElement,k='theme';try{var t=localStorage.getItem(k);if(t==='light'||t==='dark')d.dataset.theme=t}catch(e){}function c(){return d.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}function s(){var b=document.getElementById('theme-toggle');if(b)b.setAttribute('aria-pressed',String(c()==='dark'))}document.addEventListener('DOMContentLoaded',s);document.addEventListener('click',function(e){if(!e.target.closest||!e.target.closest('#theme-toggle'))return;var n=c()==='dark'?'light':'dark';d.dataset.theme=n;try{localStorage.setItem(k,n)}catch(e){}s()})})()`;
+
+// Language: a manual switch beats the browser's Accept-Language on the next visit to "/".
+const langScript = `document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('[data-set-lang]');if(a)document.cookie='lang='+a.getAttribute('data-set-lang')+'; Path=/; Max-Age=31536000; SameSite=Lax'})`;
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>{meta.title}</title>
+    <meta name="description" content={meta.description} />
+    <meta name="author" content={PERSON.name} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="en" href={enUrl} />
+    <link rel="alternate" hreflang="es" href={esUrl} />
+    <link rel="alternate" hreflang="x-default" href={enUrl} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+
+    <meta property="og:type" content="profile" />
+    <meta property="og:site_name" content={PERSON.name} />
+    <meta property="og:title" content={meta.title} />
+    <meta property="og:description" content={meta.description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content={meta.locale} />
+    <meta property="og:locale:alternate" content={ogAltLocale} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={meta.ogImageAlt} />
+    <meta property="profile:first_name" content="Francisco Mauricio" />
+    <meta property="profile:last_name" content="Ruiz" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={meta.title} />
+    <meta name="twitter:description" content={meta.description} />
+    <meta name="twitter:image" content={ogImage} />
+    <meta name="twitter:image:alt" content={meta.ogImageAlt} />
+
+    <link rel="preload" href={displayFont} as="font" type="font/woff2" crossorigin />
+    <style is:inline set:html={fontFace} />
+    <script is:inline set:html={themeScript} />
+    <script is:inline set:html={langScript} />
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">{ui.skipLink}</a>
+    <header class="wrap top">
+      <nav class="controls" aria-label={ui.siteNav}>
+        <LangSwitch lang={ui.otherLang.lang} href={ui.otherLang.href} label={ui.otherLang.label} class="lang" />
+        <ThemeToggle label={ui.themeToggle} />
+      </nav>
+    </header>
+    <main id="main" class="wrap" tabindex="-1">
+      <slot />
+    </main>
+    <footer class="wrap foot">
+      <p class="meta">© {new Date().getFullYear()} {PERSON.name}. {ui.footer}</p>
+    </footer>
+  </body>
+</html>
+
+<style>
+  .top {
+    padding-top: 0.75rem;
+  }
+
+  .controls {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .controls :global(.lang) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    font-size: var(--step--1);
+    color: var(--muted);
+  }
+
+  main:focus {
+    outline: none;
+  }
+
+  .foot {
+    padding-block: 4rem 2.5rem;
+  }
+</style>

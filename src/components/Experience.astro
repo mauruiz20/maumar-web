@@ -1,0 +1,56 @@
+---
+import type { Content } from '../content/profile';
+
+interface Props {
+  content: Content;
+}
+const { experience } = Astro.props.content;
+---
+
+<section class="section" aria-labelledby="experience">
+  <h2 id="experience">{experience.title}</h2>
+  <ol class="jobs">
+    {
+      experience.jobs.map((job) => (
+        <li class="job">
+          <h3>{job.company}</h3>
+          <p class="role">{job.role}</p>
+          <p class="meta">
+            {job.period}, {job.place}
+          </p>
+          <p class="summary">{job.summary}</p>
+          <ul class="list">
+            {job.highlights.map((h) => (
+              <li>{h}</li>
+            ))}
+          </ul>
+        </li>
+      ))
+    }
+  </ol>
+</section>
+
+<style>
+  .jobs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .job + .job {
+    margin-top: 2.5rem;
+  }
+
+  h3 {
+    font-size: var(--step-1);
+  }
+
+  .role {
+    margin-top: 0.25rem;
+    font-weight: 600;
+  }
+
+  .summary {
+    margin-block: 0.75rem;
+  }
+</style>
