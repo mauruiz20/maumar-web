@@ -74,7 +74,7 @@ describe('hotspots', () => {
     it('labels every hotspot and room control', () => {
       for (const h of HOTSPOTS) expect(content.room.hotspots[h.id].trim(), h.id).not.toBe('');
       for (const value of [content.room.enter, content.room.exit, content.room.label, content.room.loading,
-        content.room.back, content.room.menu, content.room.lamp, content.room.hint]) {
+        content.room.back, content.room.menu, content.room.lamp, content.room.hint, content.room.objects]) {
         expect(value.trim()).not.toBe('');
       }
     });
@@ -99,6 +99,8 @@ describe('hotspots', () => {
     expect(es.room.enter).toBe('Ver la habitación 3D');
     expect(en.room.hotspots.window).toBe('Window: view');
     expect(es.room.hotspots.window).toBe('Ventana: vista');
+    expect(en.room.objects).toBe('Objects');
+    expect(es.room.objects).toBe('Objetos');
   });
 
   it('labels exactly the same hotspots in en and es', () => {

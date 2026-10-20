@@ -1,6 +1,6 @@
 import { Html } from '@react-three/drei';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
-import { createContext, useContext, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, type ReactNode, type RefObject } from 'react';
 import type { Content } from '../content/profile';
 import { BOOKS, DESK, DESK_TOP, HOTSPOTS, WINDOW, onDesk, type HotspotId, type ProjectId, type Vec3 } from './hotspots';
 import { Outside } from './Outside';
@@ -339,13 +339,24 @@ function Decor() {
   );
 }
 
-/** Pulsing tap markers over every clickable object (touch screens have no hover). */
-function Markers({ onSelect }: { onSelect: (id: HotspotId) => void }) {
+/**
+ * Pulsing tap markers over every clickable object (touch screens have no hover). They render
+ * into a fixed layer next to the canvas: with drei's default target, the first marker's DOM
+ * root was replaced when R3F connected its events and that marker (the monitor's) never showed.
+ */
+function Markers({ onSelect, layer }: { onSelect: (id: HotspotId) => void; layer: RefObject<HTMLDivElement | null> }) {
   return (
     <>
       {HOTSPOTS.map((h) => (
-        <Html key={h.id} position={h.marker} center zIndexRange={[6, 0]}>
-          <button type="button" className="room-marker" tabIndex={-1} aria-hidden="true" onClick={() => onSelect(h.id)} />
+        <Html key={h.id} position={h.marker} center zIndexRange={[6, 0]} portal={layer as RefObject<HTMLElement>}>
+          <button
+            type="button"
+            className="room-marker"
+            data-hotspot={h.id}
+            tabIndex={-1}
+            aria-hidden="true"
+            onClick={() => onSelect(h.id)}
+          />
         </Html>
       ))}
     </>
@@ -372,9 +383,11 @@ export interface SceneProps {
   onSelect: (id: HotspotId) => void;
   onBook: (id: ProjectId) => void;
   onLamp: () => void;
+  /** Element the touch markers render into. */
+  markerLayer: RefObject<HTMLDivElement | null>;
 }
 
-export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSelect, onBook, onLamp }: SceneProps) {
+export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSelect, onBook, onLamp, markerLayer }: SceneProps) {
   const gl = useThree((s) => s.gl);
   useEffect(() => {
     gl.domElement.style.cursor = hovered ? 'pointer' : '';
@@ -416,7 +429,7 @@ export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSel
       </Clickable>
       <Decor />
       <Outside />
-      {coarse && !active && <Markers onSelect={onSelect} />}
+      {coarse && !active && <Markers onSelect={onSelect} layer={markerLayer} />}
     </>
   );
 }

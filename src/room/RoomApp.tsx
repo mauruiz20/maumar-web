@@ -1,8 +1,9 @@
 import { Canvas } from '@react-three/fiber';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Content } from '../content/profile';
-import { CameraRig, FOV } from './CameraRig';
-import { HOTSPOTS, OVERVIEW, OVERVIEW_PORTRAIT, hasPanel, hotspotById, type HotspotId, type ProjectId } from './hotspots';
+import { CameraRig } from './CameraRig';
+import { FOV, HOTSPOTS, OVERVIEW, OVERVIEW_PORTRAIT, hasPanel, hotspotById, type HotspotId, type ProjectId } from './hotspots';
+import { MENU_COMPACT_WIDTH, menuLayout } from './menu';
 import { PanelBody, panelTitle } from './panels';
 import { Scene, type TargetId } from './Scene';
 
@@ -21,23 +22,48 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
   const [book, setBook] = useState<ProjectId>('turnero');
   const [lampOn, setLampOn] = useState(true);
   const [portrait] = useState(() => window.innerWidth < window.innerHeight);
+  const [narrow, setNarrow] = useState(() => window.innerWidth < MENU_COMPACT_WIDTH);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const menuButtons = useRef(new Map<HotspotId, HTMLButtonElement>());
   const panelHeading = useRef<HTMLHeadingElement>(null);
   const backButton = useRef<HTMLButtonElement>(null);
+  const menuToggle = useRef<HTMLButtonElement>(null);
+  const markerLayer = useRef<HTMLDivElement>(null);
   const lastActive = useRef<HotspotId | null>(null);
 
-  const select = useCallback((id: HotspotId) => setActive(id), []);
-  const back = useCallback(() => setActive(null), []);
+  const select = useCallback((id: HotspotId) => {
+    setMenuOpen(false);
+    setActive(id);
+  }, []);
+  const back = useCallback(() => {
+    setMenuOpen(false);
+    setActive(null);
+  }, []);
   const selectBook = useCallback((id: ProjectId) => {
     setBook(id);
     setActive('bookshelf');
   }, []);
 
-  // Escape returns to the overview (it never closes the room).
+  useEffect(() => {
+    const query = window.matchMedia(`(max-width: ${MENU_COMPACT_WIDTH - 1}px)`);
+    const update = () => setNarrow(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+
+  // Escape closes the open object list first, then returns to the overview (it never closes
+  // the room).
+  const menuOpenRef = useRef(menuOpen);
+  menuOpenRef.current = menuOpen;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setActive(null);
+      if (e.key !== 'Escape') return;
+      if (menuOpenRef.current) {
+        setMenuOpen(false);
+        menuToggle.current?.focus({ preventScroll: true });
+      } else setActive(null);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -53,14 +79,23 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
       else backButton.current?.focus({ preventScroll: true });
       return;
     }
+    // Back in the overview: the menu item that opened the view, or the collapsed menu's button.
     const previous = lastActive.current;
-    if (previous) menuButtons.current.get(previous)?.focus({ preventScroll: true });
+    if (!previous) return;
+    const item = menuButtons.current.get(previous);
+    if (item && item.offsetParent !== null) item.focus({ preventScroll: true });
+    else menuToggle.current?.focus({ preventScroll: true });
   }, [active]);
 
   const hotspot = active ? hotspotById(active) : null;
   // No panel (nor bottom sheet) for a plain view; on desktop the monitor shows the CV itself.
   const showPanel = hotspot && hasPanel(hotspot.content) && (coarse || hotspot.id !== 'monitor');
   const overview = portrait ? OVERVIEW_PORTRAIT : OVERVIEW;
+  const layout = menuLayout({ compact: coarse || narrow, inView: active !== null });
+  const listShown = layout === 'list' || menuOpen;
+  const menuClass = ['room-menu', layout === 'button' && 'is-collapsed', menuOpen && 'is-open', active && 'in-view']
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div className={`room-app${coarse ? ' is-coarse' : ''}`}>
@@ -90,18 +125,39 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
             onSelect={select}
             onBook={selectBook}
             onLamp={() => setLampOn((on) => !on)}
+            markerLayer={markerLayer}
           />
           <CameraRig
-            view={hotspot?.view ?? null}
+            hotspot={hotspot}
             reducedMotion={reducedMotion}
             panel={showPanel ? (coarse ? 'sheet' : 'side') : null}
           />
         </Canvas>
+        {/* Touch markers live here (a stable drei <Html> portal target). */}
+        <div className="room-markers" ref={markerLayer} />
       </div>
 
-      <nav className="room-menu" aria-label={room.menu}>
-        <p className="room-hint">{room.hint}</p>
-        <ul>
+      {hotspot && (
+        <button type="button" className="room-back" ref={backButton} onClick={back}>
+          <span aria-hidden="true">←</span> {room.back}
+        </button>
+      )}
+
+      <nav className={menuClass} aria-label={room.menu}>
+        {layout === 'button' && (
+          <button
+            type="button"
+            className="room-menu-toggle"
+            ref={menuToggle}
+            aria-expanded={menuOpen}
+            aria-controls="room-menu-list"
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {room.objects}
+          </button>
+        )}
+        {layout === 'list' && <p className="room-hint">{room.hint}</p>}
+        <ul id="room-menu-list" hidden={!listShown}>
           {HOTSPOTS.map((h) => (
             <li key={h.id}>
               <button
@@ -118,18 +174,19 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
             </li>
           ))}
           <li>
-            <button type="button" aria-pressed={lampOn} onClick={() => setLampOn((on) => !on)}>
+            <button
+              type="button"
+              aria-pressed={lampOn}
+              onClick={() => {
+                setMenuOpen(false);
+                setLampOn((on) => !on);
+              }}
+            >
               {room.lamp}
             </button>
           </li>
         </ul>
       </nav>
-
-      {hotspot && (
-        <button type="button" className="room-back" ref={backButton} onClick={back}>
-          <span aria-hidden="true">←</span> {room.back}
-        </button>
-      )}
 
       {showPanel && hotspot && (
         <section

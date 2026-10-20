@@ -4,9 +4,9 @@ import { gsap } from 'gsap';
 import { useEffect, useRef } from 'react';
 import { Vector3, type PerspectiveCamera } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
-import { OVERVIEW, OVERVIEW_PORTRAIT, type CameraView } from './hotspots';
+import { FOV, OVERVIEW, OVERVIEW_PORTRAIT, panelShift, viewFor, type CameraView, type Hotspot, type PanelKind } from './hotspots';
 
-export const FOV = { landscape: 40, portrait: 70 } as const;
+export { FOV };
 
 /** Spherical angles of the overview camera around its target, for the orbit limits. */
 function anglesOf(view: CameraView) {
@@ -20,31 +20,27 @@ function anglesOf(view: CameraView) {
 }
 
 interface Props {
-  /** The hotspot view, or null for the overview. */
-  view: CameraView | null;
+  /** The active hotspot, or null for the overview. */
+  hotspot: Hotspot | null;
   reducedMotion: boolean;
   /** An HTML panel covering part of the canvas: the framed object shifts away from it. */
-  panel: 'side' | 'sheet' | null;
+  panel: PanelKind | null;
 }
-
-/**
- * Fraction of the canvas the view centre moves by, per panel kind: the side panel (right)
- * is wider than the object menu (left), and the bottom sheet covers the lower part.
- */
-const PANEL_SHIFT = { side: { x: 0.07, y: 0 }, sheet: { x: 0, y: 0.18 } } as const;
 
 /**
  * Overview: OrbitControls with a tight orbit around the desk, no pan, clamped zoom.
  * Hotspot views: controls off, GSAP tweens the camera and its look-at target (~1 s),
  * or cuts instantly under prefers-reduced-motion.
  */
-export function CameraRig({ view, reducedMotion, panel }: Props) {
+export function CameraRig({ hotspot, reducedMotion, panel }: Props) {
   const controls = useRef<OrbitControlsImpl>(null);
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
   const size = useThree((s) => s.size);
   const portrait = size.width < size.height;
   const shift = useRef({ x: 0, y: 0 });
   const overview = portrait ? OVERVIEW_PORTRAIT : OVERVIEW;
+  // Portrait canvases use each hotspot's portrait view (framed above the bottom sheet).
+  const view = hotspot ? viewFor(hotspot, size.width / size.height) : null;
   const { azimuth, polar, distance } = anglesOf(overview);
 
   useEffect(() => {
@@ -55,7 +51,7 @@ export function CameraRig({ view, reducedMotion, panel }: Props) {
   // Off-centre framing with setViewOffset, so the panel never hides the object.
   useEffect(() => {
     const { width, height } = size;
-    const to = panel ? PANEL_SHIFT[panel] : { x: 0, y: 0 };
+    const to = panelShift(panel, portrait);
     const apply = () => {
       const { x, y } = shift.current;
       if (x === 0 && y === 0) camera.clearViewOffset();
@@ -70,7 +66,7 @@ export function CameraRig({ view, reducedMotion, panel }: Props) {
     return () => {
       tween.kill();
     };
-  }, [panel, size, camera, reducedMotion]);
+  }, [panel, portrait, size, camera, reducedMotion]);
 
   useEffect(() => {
     const c = controls.current;

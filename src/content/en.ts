@@ -173,6 +173,7 @@ export const en: Content = {
     menu: 'Objects in the room',
     lamp: 'Desk lamp',
     hint: 'Click an object, or pick one from this list.',
+    objects: 'Objects',
     hotspots: {
       monitor: 'Monitor: experience',
       bookshelf: 'Bookshelf: projects',

@@ -173,6 +173,7 @@ export const es: Content = {
     menu: 'Objetos de la habitación',
     lamp: 'Lámpara de escritorio',
     hint: 'Hacé clic en un objeto o elegí uno de esta lista.',
+    objects: 'Objetos',
     hotspots: {
       monitor: 'Monitor: experiencia',
       bookshelf: 'Biblioteca: proyectos',

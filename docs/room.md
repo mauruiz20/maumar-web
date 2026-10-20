@@ -49,6 +49,8 @@ The window view is daytime only; a night variant (lit windows, dark sky) is a fu
   - No hover: show visible pulsing markers on every clickable object.
   - Invisible hit areas larger than the models (the Pi and the mug are tiny).
   - Camera FOV and position adapt to the aspect ratio (portrait frames the room differently).
+  - Each hotspot has a portrait view (`viewFor(hotspot, aspect)`): the object sits in the upper
+    ~45% of the screen, above the bottom sheet (max 55vh), via `panelShift('sheet', true)`.
   - Content opens in an HTML bottom sheet instead of inside the 3D scene
     (the CV on the monitor would be unreadable).
   - Lower device pixel ratio, no post-processing.
@@ -95,7 +97,8 @@ and returns focus to the "View the 3D room" button.
 **Inside the room**: OrbitControls with a tight orbit (no pan, clamped zoom) for the
 overview; a hotspot click tweens camera and target with GSAP (1 s, `power2.inOut`; instant
 under `prefers-reduced-motion`); Escape or "Back" returns. The HTML object menu lists every
-hotspot plus the lamp toggle. The monitor shows the CV as real HTML (drei `<Html transform
+hotspot plus the lamp toggle; it collapses to an "Objects" button (`menuLayout`) on touch or
+narrow (< 768 px) screens and inside any view, and Escape closes the open list before the view. The monitor shows the CV as real HTML (drei `<Html transform
 occlude>`); the window view (`{ kind: 'view' }`) opens nothing, focus waits on Back; every
 other view opens a side panel, and on touch screens everything opens in
 a bottom sheet, with pulsing markers, larger invisible hit areas, dpr [1, 1.5] and a wider

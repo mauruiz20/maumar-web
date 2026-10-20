@@ -36,6 +36,11 @@ export interface Hotspot {
   /** Scene objects that react to the click (the monitor view also seats you in the chair). */
   objects: string[];
   view: CameraView;
+  /**
+   * Used on portrait canvases (aspect < 1, 70° FOV): the object sits in the upper ~45% of the
+   * screen, above the bottom sheet, once panelShift('sheet', true) moves the view centre up.
+   */
+  portraitView?: CameraView;
   content: HotspotContent;
   /** Where the tap marker floats on touch screens. */
   marker: Vec3;
@@ -64,6 +69,27 @@ export function onDesk(item: keyof typeof DESK_ITEMS, y: number): Vec3 {
   return [x, y, z];
 }
 
+/** Vertical field of view in degrees, by canvas orientation. */
+export const FOV = { landscape: 40, portrait: 70 } as const;
+
+/** The camera view for a hotspot on a canvas of this aspect (width / height). */
+export function viewFor(hotspot: Pick<Hotspot, 'view' | 'portraitView'>, aspect: number): CameraView {
+  return aspect < 1 && hotspot.portraitView ? hotspot.portraitView : hotspot.view;
+}
+
+export type PanelKind = 'side' | 'sheet';
+
+/**
+ * Fraction of the canvas the view centre moves by while a panel covers part of it: the side
+ * panel (right) is wider than the object menu (left); the bottom sheet covers the lower part,
+ * and on a portrait phone it leaves only the upper ~45% free.
+ */
+export function panelShift(panel: PanelKind | null, portrait: boolean): { x: number; y: number } {
+  if (panel === 'side') return { x: 0.07, y: 0 };
+  if (panel === 'sheet') return { x: 0, y: portrait ? 0.28 : 0.18 };
+  return { x: 0, y: 0 };
+}
+
 export const OVERVIEW: CameraView = { position: [3.1, 2.5, 3.3], target: [-0.6, 0.95, -0.9] };
 /** Portrait screens (with a 70° FOV): further back, so every tap marker fits the width. */
 export const OVERVIEW_PORTRAIT: CameraView = { position: [3.5, 4, 7.5], target: [-0.9, 1, -2] };
@@ -73,6 +99,8 @@ export const HOTSPOTS: readonly Hotspot[] = [
     id: 'monitor',
     objects: ['monitor', 'chair'],
     view: { position: [0, 1.13, -1.65], target: [0, 1.13, -2.6] },
+    // Higher and further back, over the chair back, so screen and desk fit the narrow width.
+    portraitView: { position: [0, 1.32, -1.15], target: [0, 1.1, -2.62] },
     content: { kind: 'experience' },
     marker: [0, 1.4, -2.62],
   },
@@ -80,6 +108,7 @@ export const HOTSPOTS: readonly Hotspot[] = [
     id: 'bookshelf',
     objects: ['bookshelf'],
     view: { position: [-0.9, 1.3, -0.6], target: [-2.8, 1.15, -0.6] },
+    portraitView: { position: [-1.0, 1.45, -0.72], target: [-2.8, 1.25, -0.72] },
     content: { kind: 'projects', projects: ['turnero', 'monogestor', 'jobradar'] },
     marker: [-2.7, 2.05, -0.6],
   },
@@ -87,6 +116,8 @@ export const HOTSPOTS: readonly Hotspot[] = [
     id: 'whiteboard',
     objects: ['whiteboard'],
     view: { position: [-1.75, 1.5, -0.95], target: [-1.75, 1.5, -2.97] },
+    // Far enough back for the 1.26 m board to fit the narrow portrait width.
+    portraitView: { position: [-1.75, 1.6, -0.75], target: [-1.75, 1.5, -2.97] },
     content: { kind: 'skills' },
     marker: [-1.75, 2.05, -2.9],
   },
@@ -94,6 +125,7 @@ export const HOTSPOTS: readonly Hotspot[] = [
     id: 'pi',
     objects: ['pi'],
     view: { position: [0.95, 1.22, -1.7], target: onDesk('pi', DESK_TOP + 0.02) },
+    portraitView: { position: [0.85, 1.25, -1.72], target: onDesk('pi', DESK_TOP + 0.02) },
     content: { kind: 'project', project: 'home-server' },
     marker: onDesk('pi', DESK_TOP + 0.16),
   },
@@ -102,6 +134,7 @@ export const HOTSPOTS: readonly Hotspot[] = [
     objects: ['phone'],
     // From the left of the desk: the chair (x within ±0.24) would block a view from the front.
     view: { position: [-0.66, 1.22, -1.82], target: onDesk('phone', DESK_TOP) },
+    portraitView: { position: [-0.7, 1.25, -1.78], target: onDesk('phone', DESK_TOP) },
     content: { kind: 'contact' },
     marker: onDesk('phone', DESK_TOP + 0.14),
   },
@@ -109,6 +142,7 @@ export const HOTSPOTS: readonly Hotspot[] = [
     id: 'mug',
     objects: ['mug'],
     view: { position: [0.72, 1.18, -1.62], target: onDesk('mug', DESK_TOP + 0.05) },
+    portraitView: { position: [0.66, 1.2, -1.64], target: onDesk('mug', DESK_TOP + 0.05) },
     content: { kind: 'education' },
     marker: onDesk('mug', DESK_TOP + 0.22),
   },
@@ -120,6 +154,12 @@ export const HOTSPOTS: readonly Hotspot[] = [
     view: {
       position: [WINDOW.center[0], 1.6, -2.15],
       target: [WINDOW.center[0], 1.43, -6.15],
+    },
+    // Portrait is narrow (~36° across): stand in front of the right-hand pane, so the
+    // mullion and the frame stay out of view.
+    portraitView: {
+      position: [WINDOW.center[0] + WINDOW.size[0] / 4, 1.6, -2.15],
+      target: [WINDOW.center[0] + WINDOW.size[0] / 4, 1.43, -6.15],
     },
     content: { kind: 'view' },
     marker: [WINDOW.center[0], WINDOW.center[1] + WINDOW.size[1] / 2 + 0.16, -2.95],

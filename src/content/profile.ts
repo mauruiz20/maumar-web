@@ -106,6 +106,8 @@ export interface RoomUi {
   menu: string;
   lamp: string;
   hint: string;
+  /** The collapsed object menu's button. */
+  objects: string;
   hotspots: Record<HotspotId, string>;
 }
 
