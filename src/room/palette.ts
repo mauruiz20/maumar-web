@@ -30,7 +30,6 @@ export const PALETTE = {
   piScrew: '#4a5054',
   aluminium: '#c3c9cc',
   usbBlue: '#3a6fc4',
-  cableYellow: '#e3c34a',
 } as const;
 
 export type PaletteKey = keyof typeof PALETTE;

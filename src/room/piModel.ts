@@ -28,7 +28,8 @@ export const PI = {
   base: 0.011,
   shellRadius: 0.006,
   shellBevel: 0.0015,
-  cableRadius: 0.0025,
+  /** A USB-C cable is about 4 mm thick. */
+  powerCableRadius: 0.002,
 } as const;
 
 type Part =
@@ -38,8 +39,8 @@ type Part =
 
 export type PiPart = Part & {
   name: string;
-  /** 'case' is the box itself (shell, base, feet); 'cable' the plugs' cables. */
-  group: 'case' | 'detail' | 'cable';
+  /** 'case' is the box itself (shell, base, feet); 'wall' the socket and power brick. */
+  group: 'case' | 'detail' | 'wall';
   /** Centre, in the local frame. */
   position: Vec3;
   color: PaletteKey;
@@ -105,7 +106,8 @@ function usb(name: string, x: number, tongue: PaletteKey): PiPart[] {
 }
 
 const RJ45_X = -0.023;
-const PLUG = { width: 0.0118, height: 0.0095, length: 0.016 };
+/** The USB-C plug on the left side, near the far end. */
+const USBC = { y: SHELL_BOTTOM + 0.006, z: -0.026, size: [0.011, 0.0065, 0.0125] as Vec3 };
 
 export const PI_PARTS: readonly PiPart[] = [
   // The case: feet, the darker NVMe base (inset, so the seam shows), the aluminium shell.
@@ -139,26 +141,15 @@ export const PI_PARTS: readonly PiPart[] = [
   box('notch-front', 'detail', [NOTCH.width, NOTCH.drop, 0.0004], [0, H - NOTCH.drop / 2, FRONT + 0.0002], 'ink'),
   ...fins(),
   ...screws(),
-  // Port end, left to right facing it: Ethernet (with the yellow plug in), USB 3, USB 2.
+  // Port end, left to right facing it: Ethernet (empty), USB 3, USB 2.
   box('rj45', 'detail', [0.016, 0.0135, 0.0012], [RJ45_X, PORT_Y, FRONT + 0.0006], 'aluminium'),
-  box('rj45-plug', 'detail', [PLUG.width, PLUG.height, PLUG.length], [RJ45_X, PORT_Y - 0.0005, FRONT + PLUG.length / 2], 'cableYellow'),
+  box('rj45-hole', 'detail', [0.0118, 0.0095, 0.0004], [RJ45_X, PORT_Y - 0.0005, FRONT + 0.0014], 'ink'),
   ...usb('usb3', -0.0035, 'usbBlue'),
   ...usb('usb2', 0.0155, 'paper'),
   // Long vent slot on the right side, just above the seam.
   box('vent', 'detail', [0.0004, 0.0022, 0.06], [W / 2 + 0.0002, SHELL_BOTTOM + 0.003, -0.004], 'ink'),
-  // USB-C power on the left side, near the far end: black plug and a short stub of cable.
-  box('usbc-plug', 'detail', [0.011, 0.0065, 0.0125], [-W / 2 - 0.0055, SHELL_BOTTOM + 0.006, -0.026], 'ink'),
-  {
-    kind: 'cyl',
-    name: 'usbc-cable',
-    group: 'cable',
-    radius: 0.0022,
-    height: 0.03,
-    segments: 6,
-    rotation: [0, 0, Math.PI / 2],
-    position: [-W / 2 - 0.011 - 0.015, SHELL_BOTTOM + 0.006, -0.026],
-    color: 'ink',
-  },
+  // USB-C power plug on the left side, near the far end (its cable: powerCablePath).
+  box('usbc-plug', 'detail', USBC.size, [-W / 2 - USBC.size[0] / 2, USBC.y, USBC.z], 'ink'),
 ];
 
 /** On the desk at its DESK_ITEMS spot, turned so the ports face the Pi close-up camera. */
@@ -171,36 +162,80 @@ export function piToWorld([x, y, z]: Vec3): Vec3 {
   return [px + x * c + z * s, py + y, pz - x * s + z * c];
 }
 
+/** The back wall's plane (the room's inside face). */
+export const WALL_Z = -3;
+/** The wall socket's centre on the back wall: low, behind the desk, right of its middle. */
+export const OUTLET = { x: 0.5, y: 0.3 } as const;
+const SOCKET = { size: [0.07, 0.07, 0.008] as Vec3 };
+/** The official 27 W USB-C power supply: a small rounded black brick, cable out of its bottom. */
+export const BRICK = { size: [0.05, 0.062, 0.032] as Vec3 };
+
+/** Socket plate and power brick, in world coordinates (not part of the clickable Pi). */
+export const WALL_PARTS: readonly PiPart[] = [
+  {
+    kind: 'rounded',
+    name: 'socket',
+    group: 'wall',
+    size: SOCKET.size,
+    radius: 0.006,
+    bevel: 0.0015,
+    position: [OUTLET.x, OUTLET.y, WALL_Z + SOCKET.size[2] / 2],
+    color: 'rule',
+  },
+  {
+    kind: 'rounded',
+    name: 'brick',
+    group: 'wall',
+    size: BRICK.size,
+    radius: 0.008,
+    bevel: 0.003,
+    position: [OUTLET.x, OUTLET.y, WALL_Z + SOCKET.size[2] + BRICK.size[2] / 2],
+    color: 'ink',
+  },
+];
+
+/** Where the power cable leaves the USB-C plug, in world coordinates. */
+export function usbcPlugEnd(): Vec3 {
+  return piToWorld([-W / 2 - USBC.size[0], USBC.y, USBC.z]);
+}
+
 /**
- * The yellow Ethernet cable, in world coordinates: out of the plug towards the room, round
- * the left side of the case, along the desk to its back edge and down behind it.
+ * The black USB-C power cable, in world coordinates: out of the plug, down onto the desk,
+ * back along it past the monitor's right, off the back edge, down behind the desk and into
+ * the bottom of the power brick on the wall socket.
  */
-export function cablePath(): Vec3[] {
-  const r = PI.cableRadius;
-  const plugEnd = piToWorld([RJ45_X, PORT_Y - 0.0005, FRONT + PLUG.length]);
+export function powerCablePath(): Vec3[] {
+  const r = PI.powerCableRadius;
   const onDeskAt = (x: number, z: number): Vec3 => {
     const [wx, , wz] = piToWorld([x, 0, z]);
     return [wx, DESK_TOP + r, wz];
   };
   const back = DESK.center[1] - DESK.size[1] / 2;
-  const [sx, , sz] = onDeskAt(-0.07, -0.1);
+  const brickBottom = OUTLET.y - BRICK.size[1] / 2;
+  const brickZ = WALL_Z + SOCKET.size[2] + BRICK.size[2] / 2;
+  const drop = OUTLET.x + 0.045;
   return [
-    plugEnd,
-    piToWorld([RJ45_X - 0.002, PORT_Y - 0.008, FRONT + PLUG.length + 0.012]),
-    onDeskAt(-0.035, FRONT + PLUG.length + 0.022),
-    onDeskAt(-0.06, FRONT + PLUG.length + 0.012),
-    onDeskAt(-0.072, FRONT - 0.01),
-    onDeskAt(-0.075, -0.03),
-    [sx, DESK_TOP + r, sz],
-    [sx - 0.01, DESK_TOP + r, back + 0.02],
-    [sx - 0.012, DESK_TOP - 0.01, back - 0.012],
-    [sx - 0.014, DESK_TOP - 0.16, back - 0.02],
+    usbcPlugEnd(),
+    piToWorld([-W / 2 - USBC.size[0] - 0.01, USBC.y - 0.008, USBC.z - 0.004]),
+    onDeskAt(-W / 2 - 0.03, -0.045),
+    onDeskAt(-W / 2 - 0.035, -0.09),
+    [OUTLET.x + 0.03, DESK_TOP + r, -2.75],
+    [drop, DESK_TOP + r, back + 0.012],
+    [drop, DESK_TOP - 0.012, back - 0.014],
+    [drop, DESK_TOP - 0.15, brickZ + 0.03],
+    [drop, brickBottom + 0.06, brickZ + 0.025],
+    [drop - 0.012, brickBottom - 0.03, brickZ + 0.01],
+    [OUTLET.x + 0.012, brickBottom - 0.028, brickZ],
+    [OUTLET.x, brickBottom, brickZ],
   ];
 }
 
-export function cableGeometry(): TubeGeometry {
-  const curve = new CatmullRomCurve3(cablePath().map((p) => new Vector3(...p)), false, 'centripetal');
-  return new TubeGeometry(curve, 40, PI.cableRadius, 5, false);
+export function powerCableCurve(): CatmullRomCurve3 {
+  return new CatmullRomCurve3(powerCablePath().map((p) => new Vector3(...p)), false, 'centripetal');
+}
+
+export function powerCableGeometry(): TubeGeometry {
+  return new TubeGeometry(powerCableCurve(), 64, PI.powerCableRadius, 5, false);
 }
 
 /** A box with rounded vertical edges and a small bevel on the top and bottom edges. */

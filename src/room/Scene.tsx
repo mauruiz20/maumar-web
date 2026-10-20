@@ -10,7 +10,7 @@ import type { ModelId } from './models';
 import type { MarkerId } from './nav';
 import { Highlight } from './highlight';
 import { Outside } from './Outside';
-import { RaspberryPi } from './RaspberryPi';
+import { PiPower, RaspberryPi } from './RaspberryPi';
 import { ExperienceBody } from './panels';
 import { PALETTE as C, paletteFor } from './palette';
 
@@ -482,6 +482,7 @@ export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSel
         <Lamp on={lampOn} />
       </Clickable>
       <Decor />
+      <PiPower />
       <Outside />
       <ReadySignal onReady={onReady} />
       {markers.length > 0 && <Markers markers={markers} onMarker={onMarker} deskLabel={deskLabel} layer={markerLayer} />}

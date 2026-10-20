@@ -1,7 +1,24 @@
 import { Box3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { DESK, DESK_ITEMS, DESK_TOP, hotspotById } from '../src/room/hotspots';
-import { PI, PI_PARTS, PI_PLACEMENT, cableGeometry, cablePath, partGeometry, piToWorld, triangleCount } from '../src/room/piModel';
+import { PALETTE } from '../src/room/palette';
+import { PLACEMENTS, LAMP_BULB } from '../src/room/layout';
+import {
+  BRICK,
+  OUTLET,
+  PI,
+  PI_PARTS,
+  PI_PLACEMENT,
+  WALL_PARTS,
+  WALL_Z,
+  partGeometry,
+  piToWorld,
+  powerCableCurve,
+  powerCableGeometry,
+  powerCablePath,
+  triangleCount,
+  usbcPlugEnd,
+} from '../src/room/piModel';
 
 /** The monitor (and its stand) spans x within ±0.31 m: the cable keeps right of it. */
 const MONITOR_CLEARANCE = 0.32;
@@ -41,10 +58,10 @@ describe('Raspberry Pi model', () => {
       }
   });
 
-  it('keeps everything but the cables within a few mm of the case', () => {
-    const b = boundsOf(PI_PARTS.filter((p) => p.group !== 'cable'));
+  it('keeps every part within a few mm of the case', () => {
+    const b = boundsOf(PI_PARTS);
     const c = boundsOf(caseParts);
-    expect(c.min.x - b.min.x).toBeLessThan(0.02); // the USB-C plug sticks out of the left side
+    expect(c.min.x - b.min.x).toBeLessThan(0.013); // the USB-C plug sticks out of the left side
     expect(b.max.x - c.max.x).toBeLessThan(0.002);
     expect(b.max.y).toBeLessThanOrEqual(c.max.y + 0.001);
   });
@@ -76,24 +93,61 @@ describe('Raspberry Pi model', () => {
     }
   });
 
-  it('runs the Ethernet cable along the desk and off its back edge, clear of the mug and the case', () => {
-    const points = cablePath();
+  it('has no Ethernet cable or plug: the RJ45 port is empty', () => {
+    expect(PI_PARTS.some((p) => /yellow/i.test(p.color) || p.name === 'rj45-plug')).toBe(false);
+    expect('cableYellow' in PALETTE).toBe(false);
+    expect(PI_PARTS.find((p) => p.name === 'rj45-hole')?.color).toBe('ink');
+  });
+
+  it('runs the black USB-C power cable along the desk, off its back edge, down to the brick', () => {
+    const points = powerCableCurve().getPoints(200).map((v) => [v.x, v.y, v.z] as const);
     const [mx, mz] = DESK_ITEMS.mug.at;
     const [px, pz] = DESK_ITEMS.pi.at;
     const back = DESK.center[1] - DESK.size[1] / 2;
-    for (const [i, [x, y, z]] of points.entries()) {
-      if (z > back) expect(y, `point ${i}`).toBeGreaterThanOrEqual(DESK_TOP + PI.cableRadius - 0.0005);
-      expect(Math.hypot(x - mx, z - mz), `point ${i}`).toBeGreaterThan(DESK_ITEMS.mug.radius + PI.cableRadius);
-      if (i > 2) expect(Math.hypot(x - px, z - pz), `point ${i}`).toBeGreaterThan(DESK_ITEMS.pi.radius);
-      expect(Math.abs(x)).toBeGreaterThan(MONITOR_CLEARANCE);
-    }
+    const lamp = PLACEMENTS.lampRoundTable.position;
+    // It starts at the USB-C plug and ends in the bottom of the power brick.
+    expect(Math.hypot(...points[0]!.map((v, k) => v - usbcPlugEnd()[k]!))).toBeLessThan(1e-6);
     const end = points.at(-1)!;
-    expect(end[2]).toBeLessThan(back);
-    expect(end[1]).toBeLessThan(DESK_TOP);
+    expect(Math.abs(end[0] - OUTLET.x)).toBeLessThan(0.01);
+    expect(Math.abs(end[1] - (OUTLET.y - BRICK.size[1] / 2))).toBeLessThan(0.003);
+    for (const [i, [x, y, z]] of points.entries()) {
+      if (z > back + 0.005) expect(y, `sample ${i}`).toBeGreaterThanOrEqual(DESK_TOP + PI.powerCableRadius - 0.003);
+      expect(Math.hypot(x - mx, z - mz), `sample ${i}`).toBeGreaterThan(DESK_ITEMS.mug.radius + PI.powerCableRadius);
+      expect(Math.abs(x), `sample ${i}`).toBeGreaterThan(MONITOR_CLEARANCE);
+      expect(Math.hypot(x - lamp[0], z - lamp[2]), `sample ${i}`).toBeGreaterThan(0.2);
+      expect(Math.hypot(x - LAMP_BULB[0], z - LAMP_BULB[2])).toBeGreaterThan(0.2);
+      // Clear of the case: past the plug, outside the case footprint.
+      if (i > 20) expect(Math.hypot(x - px, z - pz), `sample ${i}`).toBeGreaterThan(DESK_ITEMS.pi.radius);
+      // Never inside the wall.
+      expect(z, `sample ${i}`).toBeGreaterThan(WALL_Z + PI.powerCableRadius);
+    }
+    expect(powerCablePath().length).toBeGreaterThan(6);
+  });
+
+  it('plugs the brick into a socket on the back wall, low and under the desk', () => {
+    const socket = WALL_PARTS.find((p) => p.name === 'socket')!;
+    const brick = WALL_PARTS.find((p) => p.name === 'brick')!;
+    const sb = boundsOf([socket]);
+    const bb = boundsOf([brick]);
+    expect(sb.min.z).toBeCloseTo(WALL_Z, 6);
+    expect(bb.min.z).toBeCloseTo(sb.max.z, 6);
+    for (const b of [sb, bb]) {
+      expect(b.max.y).toBeLessThan(DESK_TOP - 0.2);
+      expect(b.min.y).toBeGreaterThan(0.05);
+      expect(b.min.x).toBeGreaterThan(DESK.center[0] - DESK.size[0] / 2 + 0.1);
+      expect(b.max.x).toBeLessThan(DESK.center[0] + DESK.size[0] / 2 - 0.1);
+    }
+    // The brick is centred on its socket.
+    expect(Math.abs((bb.min.x + bb.max.x) / 2 - OUTLET.x)).toBeLessThan(1e-6);
+    expect(Math.abs((bb.min.y + bb.max.y) / 2 - OUTLET.y)).toBeLessThan(1e-6);
+  });
+
+  it('keeps the socket and brick small', () => {
+    expect(WALL_PARTS.reduce((sum, p) => sum + triangleCount(partGeometry(p)), 0)).toBeLessThan(400);
   });
 
   it('stays within a modest triangle budget (< 3k)', () => {
-    const total = PI_PARTS.reduce((sum, p) => sum + triangleCount(partGeometry(p)), 0) + triangleCount(cableGeometry());
+    const total = PI_PARTS.reduce((sum, p) => sum + triangleCount(partGeometry(p)), 0) + triangleCount(powerCableGeometry());
     expect(total).toBeLessThan(3000);
   });
 });
