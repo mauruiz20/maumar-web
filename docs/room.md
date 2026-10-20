@@ -119,7 +119,13 @@ narrow (< 768 px) screens and inside any view, and Escape closes the open list b
 occlude>`); the window view (`{ kind: 'view' }`) opens nothing, focus waits on Back; every
 other view opens a side panel, and on touch screens everything opens in
 a bottom sheet, with pulsing markers, larger invisible hit areas, dpr [1, 1.5] and a wider
-portrait camera. Desktop dpr is [1, 2]; no post-processing, no shadows yet.
+portrait camera. Desktop dpr is [1, 2]; no post-processing and no real-time shadows: two
+static contact shadows (`shadows.ts`, `ContactShadow.tsx`), one over the floor and rug and one
+over the desk top, are captured once from below with a depth material, blurred, and shown as
+transparent planes (ink-tinted, low opacity); after that they cost two textured planes per
+frame. They re-capture only if their `version` changes, which nothing does today (the lamp
+toggle changes no geometry). Their capture boxes stay inside the room, so the city, mountains,
+sky and window never end up in them.
 
 **Files**
 
@@ -136,6 +142,7 @@ portrait camera. Desktop dpr is [1, 2]; no post-processing, no shadows yet.
 | `src/room/hotspots.ts` | Hotspots as data: objects, camera views, content, markers, books |
 | `src/room/models.ts`, `layout.ts`, `assets.ts`, `progress.ts` | Model manifest; fitted placements and model geometry; model loading (useLoader + GLTFLoader) and progress for the loading screen |
 | `src/room/piModel.ts`, `RaspberryPi.tsx` | The Pi as procedural parts (sizes, empty ports, a breathing green status LED; no cables in the room, for consistency; tested in Node) and its component |
+| `src/room/shadows.ts`, `ContactShadow.tsx` | The two static contact shadows: planes, capture cameras (pure, tested), one-time capture and disposal |
 | `src/room/nav.ts`, `menu.ts` | Back stack, desk group and which touch markers show; object menu layout |
 | `src/room/city.ts`, `Outside.tsx` | Seeded city and mountain generators (pure, tested); the view through the window, drawn only inside a stencil mask of the opening |
 | `src/room/panels.tsx` | Renders hotspot content from the en/es content objects |

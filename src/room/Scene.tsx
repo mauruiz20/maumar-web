@@ -9,8 +9,10 @@ import { BOOK_FILLERS, CV_SCREEN, LAMP_BULB, PLACEMENTS, type Placement } from '
 import type { ModelId } from './models';
 import type { MarkerId } from './nav';
 import { Highlight } from './highlight';
+import { ContactShadow } from './ContactShadow';
 import { Outside } from './Outside';
 import { RaspberryPi } from './RaspberryPi';
+import { SHADOWS } from './shadows';
 import { ExperienceBody } from './panels';
 import { PALETTE as C, paletteFor } from './palette';
 
@@ -484,6 +486,9 @@ export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSel
         <Lamp on={lampOn} />
       </Clickable>
       <Decor />
+      {/* Static: captured once (see shadows.ts). */}
+      <ContactShadow spec={SHADOWS.floor} />
+      <ContactShadow spec={SHADOWS.desk} />
       <Outside />
       <ReadySignal onReady={onReady} />
       {markers.length > 0 && <Markers markers={markers} onMarker={onMarker} deskLabel={deskLabel} layer={markerLayer} />}
