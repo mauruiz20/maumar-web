@@ -59,8 +59,11 @@ function Cyl({ size, position, color, rotation, segments = 20 }: CylProps) {
 interface ModelProps {
   id: ModelId;
   placement: Placement;
-  /** A material (by Kenney name) that glows, e.g. the lamp shade when the lamp is on. */
-  glow?: { material: string; on: boolean };
+  /**
+   * A material (by Kenney name) that glows, e.g. the lamp shade when the lamp is on: emissive
+   * in its own palette colour, so it brightens without washing out to the light's tint.
+   */
+  glow?: { material: string; on: boolean; intensity: number };
 }
 
 const meshesOf = (root: Object3D): Mesh[] => {
@@ -91,14 +94,17 @@ function Model({ id, placement, glow }: ModelProps) {
   }, [scene, id]);
   useEffect(() => () => meshesOf(object).forEach((m) => (m.material as MeshStandardMaterial).dispose()), [object]);
   const glowing = glow?.on ? glow.material : null;
+  const glowIntensity = glow?.intensity ?? 0;
   useEffect(() => {
     for (const mesh of meshesOf(object)) {
       const m = mesh.material as MeshStandardMaterial;
       const glows = m.name === glowing;
-      m.emissive.set(lit ? C.highlight : glows ? C.lampLight : '#000000');
-      m.emissiveIntensity = lit ? 0.15 : glows ? 0.7 : 0;
+      if (lit) m.emissive.set(C.highlight);
+      else if (glows) m.emissive.copy(m.color);
+      else m.emissive.set('#000000');
+      m.emissiveIntensity = lit ? 0.15 : glows ? glowIntensity : 0;
     }
-  }, [object, lit, glowing]);
+  }, [object, lit, glowing, glowIntensity]);
   return (
     <primitive object={object} position={placement.position} rotation={[0, placement.rotationY, 0]} scale={placement.scale} />
   );
@@ -278,7 +284,7 @@ function Mug() {
 function Lamp({ on }: { on: boolean }) {
   return (
     <group name="lamp">
-      <Model id="lampRoundTable" placement={PLACEMENTS.lampRoundTable} glow={{ material: 'lamp', on }} />
+      <Model id="lampRoundTable" placement={PLACEMENTS.lampRoundTable} glow={{ material: 'lamp', on, intensity: 0.55 }} />
       <pointLight position={LAMP_BULB} color={C.lampLight} intensity={on ? 1.6 : 0} distance={2.5} decay={2} />
     </group>
   );

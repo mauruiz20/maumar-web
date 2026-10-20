@@ -16,22 +16,58 @@ import {
 import { MODEL_FILES, MODEL_IDS, modelUrl, type ModelId } from '../src/room/models';
 import { PALETTE, paletteFor } from '../src/room/palette';
 import { createProgressRelay } from '../src/room/progress';
-import { bounds, triangles, upwardSurfaces, type Triangle } from './helpers/glb';
+import { getBounds, NodeIO } from '@gltf-transform/core';
+import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
+import { MeshoptDecoder } from 'meshoptimizer';
+import { bounds, readGlb, triangles, upwardSurfaces, type Triangle } from './helpers/glb';
 
+/** Shipped (meshopt-compressed) files, and the uncompressed Kenney sources they are built from. */
 const DIR = join(import.meta.dirname, '..', 'public', 'models', 'kenney');
-const glb = (id: ModelId) => join(DIR, MODEL_FILES[id]);
+const SRC = join(import.meta.dirname, '..', 'assets', 'models', 'kenney');
+const shipped = (id: ModelId) => join(DIR, MODEL_FILES[id]);
+/** Geometry tests read the sources: same geometry, no decoder needed. */
+const glb = (id: ModelId) => join(SRC, MODEL_FILES[id]);
 const close = (a: number, b: number, tol: number) => expect(Math.abs(a - b)).toBeLessThanOrEqual(tol);
 
 describe('models manifest', () => {
   it('lists files that exist, and nothing else in the folder', () => {
-    for (const id of MODEL_IDS) expect(existsSync(glb(id)), id).toBe(true);
+    for (const id of MODEL_IDS) expect(existsSync(shipped(id)), id).toBe(true);
     const glbs = readdirSync(DIR).filter((f) => f.endsWith('.glb')).sort();
     expect(glbs).toEqual(MODEL_IDS.map((id) => MODEL_FILES[id]).sort());
   });
 
-  it('keeps every model small: under 200 KB in total', () => {
-    const total = MODEL_IDS.reduce((sum, id) => sum + statSync(glb(id)).size, 0);
-    expect(total).toBeLessThan(200 * 1024);
+  it('keeps a source for every shipped model, with the license', () => {
+    for (const id of MODEL_IDS) expect(existsSync(glb(id)), id).toBe(true);
+    expect(existsSync(join(SRC, 'License.txt'))).toBe(true);
+  });
+
+  it('ships meshopt-compressed files (no Draco, no textures)', () => {
+    for (const id of MODEL_IDS) {
+      const { json } = readGlb(shipped(id)) as unknown as { json: { extensionsRequired?: string[]; images?: unknown[] } };
+      expect(json.extensionsRequired, id).toContain('EXT_meshopt_compression');
+      expect(json.extensionsRequired, id).not.toContain('KHR_draco_mesh_compression');
+      expect(json.images ?? [], id).toEqual([]);
+    }
+  });
+
+  it('keeps the shipped models under 60 KB in total', () => {
+    const total = MODEL_IDS.reduce((sum, id) => sum + statSync(shipped(id)).size, 0);
+    expect(total).toBeLessThan(60 * 1024);
+  });
+
+  it('decodes each shipped model to the source geometry (within quantization)', async () => {
+    const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'meshopt.decoder': MeshoptDecoder });
+    await MeshoptDecoder.ready;
+    for (const id of MODEL_IDS) {
+      const doc = await io.read(shipped(id));
+      const b = getBounds(doc.getRoot().getDefaultScene() ?? doc.getRoot().listScenes()[0]!);
+      const source = bounds(triangles(glb(id)));
+      const tol = Math.max(...[0, 1, 2].map((k) => source.max[k]! - source.min[k]!)) / 1000;
+      for (let k = 0; k < 3; k++) {
+        close(b.min[k]!, source.min[k]!, Math.max(tol, 1e-4));
+        close(b.max[k]!, source.max[k]!, Math.max(tol, 1e-4));
+      }
+    }
   });
 
   it('ships the CC0 license next to the models', () => {
@@ -141,6 +177,20 @@ describe('fitted layout', () => {
       expect(b.min[0], id).toBeGreaterThanOrEqual(-3);
       expect(b.min[2], id).toBeGreaterThanOrEqual(-3);
     }
+  });
+
+  it('sizes the chair like an office chair, tucked in front of the desk', () => {
+    const tris = placedTriangles('chairDesk');
+    const b = bounds(tris);
+    const seat = upwardSurfaces(tris).reduce((best, s) => (s.area > best.area ? s : best));
+    expect(seat.y).toBeGreaterThan(0.38);
+    expect(seat.y).toBeLessThan(0.47);
+    expect(b.max[1]).toBeGreaterThan(0.95);
+    expect(b.max[1]).toBeLessThan(1.06);
+    close(b.max[0] - b.min[0], 0.6, 0.02);
+    // In front of the desk, not under or behind the room's front edge of it.
+    expect(b.min[2]).toBeGreaterThan(DESK.center[1] + DESK.size[1] / 2 - 0.05);
+    expect(b.max[2]).toBeLessThan(-1.2);
   });
 
   it('derives the bookcase shelves from the model', () => {

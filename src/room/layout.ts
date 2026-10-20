@@ -113,8 +113,10 @@ const KIT_SMALL = 1.6;
 
 export const PLACEMENTS = {
   desk: placeModel(MODEL_BOUNDS.desk, { at: [DESK.center[0], 0, DESK.center[1]], size: [DESK.size[0], DESK_TOP, DESK.size[1]] }),
-  // Turned to face the desk, backrest towards the room.
-  chairDesk: placeModel(MODEL_BOUNDS.chairDesk, { at: [0, 0, -1.65], turns: 2, scale: 2 }),
+  // An office chair tucked in, facing the desk (backrest towards the room). Kenney's backrest
+  // is tall for its seat, so 1.04 m overall gives a ~0.40 m seat: the compromise between a
+  // 0.45 m seat and a 0.95-1.0 m backrest.
+  chairDesk: placeModel(MODEL_BOUNDS.chairDesk, { at: [0, 0, -1.8], turns: 2, size: [0.6, 1.04, 0.56] }),
   computerScreen: placeModel(MODEL_BOUNDS.computerScreen, { at: [0, DESK_TOP, -2.62], scale: KIT_SMALL }),
   computerKeyboard: placeModel(MODEL_BOUNDS.computerKeyboard, { at: [0, DESK_TOP, -2.3], scale: KIT_SMALL }),
   computerMouse: placeModel(MODEL_BOUNDS.computerMouse, { at: [0.3, DESK_TOP, -2.38], scale: KIT_SMALL }),

@@ -1,8 +1,10 @@
+import { join } from 'node:path';
 import { PerspectiveCamera, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { en } from '../src/content/en';
 import { es } from '../src/content/es';
-import { DESK, DESK_ITEMS, DESK_TOP, FOV, OVERVIEW_PORTRAIT, viewFor, type CameraView, type Vec3 } from '../src/room/hotspots';
+import { DESK, DESK_ITEMS, DESK_TOP, FOV, OVERVIEW_PORTRAIT, onDesk, viewFor, type CameraView, type Vec3 } from '../src/room/hotspots';
+import { CV_SCREEN, PLACEMENTS, applyPlacement } from '../src/room/layout';
 import {
   DESK_GROUP,
   DESK_VIEW,
@@ -13,6 +15,9 @@ import {
   type MarkerId,
   type Place,
 } from '../src/room/nav';
+import { triangles } from './helpers/glb';
+
+const CHAIR_GLB = join(import.meta.dirname, '..', 'assets', 'models', 'kenney', 'chairDesk.glb');
 
 const PHONES = [
   [390, 844],
@@ -125,6 +130,14 @@ describe('desk view framing on phones', () => {
         expect(p.y).toBeGreaterThan(130);
         expect(p.y).toBeLessThan(h - 40);
       }
+    });
+
+    it('keeps the chair below the four desk objects on screen', () => {
+      // Every vertex of the real chair geometry (from the source GLB), placed in the room.
+      const chair = triangles(CHAIR_GLB).flatMap((t) => [t.a, t.b, t.c]).map((p) => applyPlacement(p, PLACEMENTS.chairDesk));
+      const chairTop = Math.min(...chair.map((p) => toScreen(view, [w, h], p).y));
+      const objects: Vec3[] = [CV_SCREEN.position, onDesk('pi', DESK_TOP), onDesk('phone', DESK_TOP), onDesk('mug', DESK_TOP)];
+      for (const o of objects) expect(toScreen(view, [w, h], o).y).toBeLessThan(chairTop - 10);
     });
 
     it('keeps each desk-view marker over its object', () => {

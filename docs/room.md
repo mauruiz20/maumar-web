@@ -40,8 +40,11 @@ The window view is daytime only; a night variant (lit windows, dark sky) is a fu
   CC-BY asset in a credits section.
 
 **Credits**: furniture models from the Furniture Kit 2.0 by Kenney (kenney.nl), CC0. The 10
-GLBs used are in `public/models/kenney/` with the kit's `License.txt`; they are recoloured to
-the site palette at load time (`paletteFor` in `palette.ts`) and placed by `layout.ts`.
+source GLBs, as downloaded, are in `assets/models/kenney/` with the kit's `License.txt`;
+`npm run models` (`scripts/models.mjs`, gltf-transform) writes the shipped copies to
+`public/models/kenney/` with EXT_meshopt_compression (quantized, ~51 KB in all, decoded by
+the WebAssembly inlined in the room chunk). They are recoloured to the site palette at load
+time (`paletteFor` in `palette.ts`) and placed by `layout.ts`.
 
 ## Mobile
 
