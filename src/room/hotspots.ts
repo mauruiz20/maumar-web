@@ -125,8 +125,9 @@ export const HOTSPOTS: readonly Hotspot[] = [
   {
     id: 'pi',
     objects: ['pi'],
-    view: { position: [0.95, 1.22, -1.7], target: onDesk('pi', DESK_TOP + 0.02) },
-    portraitView: { position: [0.85, 1.25, -1.72], target: onDesk('pi', DESK_TOP + 0.02) },
+    // Close in on the 41 mm-tall case from the front right, where its ports face (piModel.ts).
+    view: { position: [0.726, 0.948, -2.063], target: onDesk('pi', DESK_TOP + 0.02) },
+    portraitView: { position: [0.728, 1.034, -1.981], target: onDesk('pi', DESK_TOP + 0.02) },
     content: { kind: 'project', project: 'home-server' },
     marker: onDesk('pi', DESK_TOP + 0.16),
   },

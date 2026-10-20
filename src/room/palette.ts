@@ -23,6 +23,14 @@ export const PALETTE = {
   /** Hover highlight (emissive). */
   highlight: '#f28db7',
   lampLight: '#ffd9a8',
+  /** The Raspberry Pi's case and ports (piModel.ts). */
+  piShell: '#25292b',
+  piBase: '#171a1b',
+  piFin: '#3a3f42',
+  piScrew: '#4a5054',
+  aluminium: '#c3c9cc',
+  usbBlue: '#3a6fc4',
+  cableYellow: '#e3c34a',
 } as const;
 
 export type PaletteKey = keyof typeof PALETTE;

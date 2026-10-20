@@ -1,6 +1,6 @@
 import { Html } from '@react-three/drei';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
-import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
+import { useContext, useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import { MeshStandardMaterial, type Mesh, type Object3D } from 'three';
 import { useModel } from './assets';
 import type { Content } from '../content/profile';
@@ -8,12 +8,12 @@ import { BOOKS, DESK_TOP, WINDOW, onDesk, type HotspotId, type ProjectId, type V
 import { BOOK_FILLERS, CV_SCREEN, LAMP_BULB, PLACEMENTS, type Placement } from './layout';
 import type { ModelId } from './models';
 import type { MarkerId } from './nav';
+import { Highlight } from './highlight';
 import { Outside } from './Outside';
+import { RaspberryPi } from './RaspberryPi';
 import { ExperienceBody } from './panels';
 import { PALETTE as C, paletteFor } from './palette';
 
-/** True while the pointer is over the object this part belongs to. */
-const Highlight = createContext(false);
 
 interface PartProps {
   size: Vec3;
@@ -253,15 +253,6 @@ function Chair() {
   );
 }
 
-function Pi() {
-  return (
-    <group name="pi" position={onDesk('pi', DESK_TOP)}>
-      <Box size={[0.1, 0.018, 0.07]} position={[0, 0.009, 0]} color={C.paper} />
-      <Box size={[0.1, 0.017, 0.07]} position={[0, 0.0265, 0]} color={C.accent} />
-    </group>
-  );
-}
-
 function Phone() {
   return (
     <group name="phone" position={onDesk('phone', DESK_TOP + 0.005)} rotation={[0, 0.25, 0]}>
@@ -470,7 +461,7 @@ export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSel
         <Chair />
       </Clickable>
       <Clickable {...common} {...click('pi')}>
-        <Pi />
+        <RaspberryPi />
       </Clickable>
       <Clickable {...common} {...click('phone')}>
         <Phone />

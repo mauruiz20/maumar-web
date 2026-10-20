@@ -23,7 +23,7 @@ The simple mode (phase 1) is the same content as plain HTML and is always one cl
 | Chair + monitor | Camera sits you in front of the screen | CV as real HTML (drei `<Html>`) | Kenney: `chairDesk`, `computerScreen`, `computerKeyboard`, `computerMouse` (desk: `desk`) |
 | Bookshelf | Camera moves to the shelf | One book per project: Turnero, MonoGestor, jobradar | Kenney `bookcaseOpen` + `books` as filler; the 3 project books are boxes |
 | Whiteboard | Front view | Skills grouped by area | Box + texture |
-| Raspberry Pi | Zoom on the desk | Home server: hardware, Cloudflare Tunnel, what runs on it | Boxes for now; to be modelled by Mauricio |
+| Raspberry Pi | Zoom on the desk | Home server: hardware, Cloudflare Tunnel, what runs on it | Procedural (owner's Pi 5 in an Argon NEO 5 M.2 case) |
 | Phone | Lifts towards the camera | Contact + CV download | Boxes |
 | Mug | Short zoom on the desk | Education: Computer Engineering, UNT, 2019–2023 | Cylinders (+ logo decal later) |
 | Lamp | Toggles on/off | Easter egg, or light/dark theme toggle | Kenney `lampRoundTable` |
@@ -134,6 +134,7 @@ portrait camera. Desktop dpr is [1, 2]; no post-processing, no shadows yet.
 | `src/room/CameraRig.tsx` | Orbit limits, GSAP camera moves, panel-aware framing |
 | `src/room/hotspots.ts` | Hotspots as data: objects, camera views, content, markers, books |
 | `src/room/models.ts`, `layout.ts`, `assets.ts`, `progress.ts` | Model manifest; fitted placements and model geometry; useGLTF loading and progress for the loading screen |
+| `src/room/piModel.ts`, `RaspberryPi.tsx` | The Pi as procedural parts (sizes, ports, cable path, tested in Node) and its component |
 | `src/room/nav.ts`, `menu.ts` | Back stack, desk group and which touch markers show; object menu layout |
 | `src/room/city.ts`, `Outside.tsx` | Seeded city and mountain generators (pure, tested); the view through the window, drawn only inside a stencil mask of the opening |
 | `src/room/panels.tsx` | Renders hotspot content from the en/es content objects |
