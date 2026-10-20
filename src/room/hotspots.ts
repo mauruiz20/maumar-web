@@ -35,6 +35,25 @@ export interface Hotspot {
 }
 
 export const DESK_TOP = 0.75;
+/** Desktop footprint on the floor plane: centre [x, z] and size [width, depth]. */
+export const DESK = { center: [0, -2.5], size: [1.6, 0.8] } as const;
+
+/**
+ * Small objects on the desk: floor-plane position [x, z] and a footprint radius that covers
+ * the object at any rotation. The scene, the touch hit areas, the camera views and the
+ * markers all read these, so an object and its hotspot never drift apart.
+ */
+export const DESK_ITEMS = {
+  pi: { at: [0.58, -2.3], radius: 0.065 },
+  phone: { at: [-0.42, -2.25], radius: 0.09 },
+  mug: { at: [0.36, -2.22], radius: 0.065 },
+} as const satisfies Record<string, { at: readonly [number, number]; radius: number }>;
+
+/** A desk item's position at height y above the floor. */
+export function onDesk(item: keyof typeof DESK_ITEMS, y: number): Vec3 {
+  const [x, z] = DESK_ITEMS[item].at;
+  return [x, y, z];
+}
 
 export const OVERVIEW: CameraView = { position: [3.1, 2.5, 3.3], target: [-0.6, 0.95, -0.9] };
 /** Portrait screens (with a 70° FOV): further back, so every tap marker fits the width. */
@@ -65,23 +84,23 @@ export const HOTSPOTS: readonly Hotspot[] = [
   {
     id: 'pi',
     objects: ['pi'],
-    view: { position: [0.95, 1.22, -1.7], target: [0.58, DESK_TOP + 0.02, -2.3] },
+    view: { position: [0.95, 1.22, -1.7], target: onDesk('pi', DESK_TOP + 0.02) },
     content: { kind: 'project', project: 'home-server' },
-    marker: [0.58, DESK_TOP + 0.16, -2.3],
+    marker: onDesk('pi', DESK_TOP + 0.16),
   },
   {
     id: 'phone',
     objects: ['phone'],
-    view: { position: [-0.3, 1.28, -1.45], target: [-0.42, DESK_TOP, -2.06] },
+    view: { position: [-0.3, 1.28, -1.64], target: onDesk('phone', DESK_TOP) },
     content: { kind: 'contact' },
-    marker: [-0.42, DESK_TOP + 0.14, -2.06],
+    marker: onDesk('phone', DESK_TOP + 0.14),
   },
   {
     id: 'mug',
     objects: ['mug'],
-    view: { position: [0.72, 1.18, -1.38], target: [0.36, DESK_TOP + 0.05, -1.98] },
+    view: { position: [0.72, 1.18, -1.62], target: onDesk('mug', DESK_TOP + 0.05) },
     content: { kind: 'education' },
-    marker: [0.36, DESK_TOP + 0.22, -1.98],
+    marker: onDesk('mug', DESK_TOP + 0.22),
   },
 ];
 

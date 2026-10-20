@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { en } from '../src/content/en';
 import { es } from '../src/content/es';
-import { BOOKS, DECOR, HOTSPOTS, OVERVIEW, hotspotById } from '../src/room/hotspots';
+import { BOOKS, DECOR, DESK, DESK_ITEMS, HOTSPOTS, OVERVIEW, hotspotById } from '../src/room/hotspots';
 
 const PUBLIC = join(import.meta.dirname, '..', 'public');
 const isVec3 = (v: unknown) => Array.isArray(v) && v.length === 3 && v.every((n) => Number.isFinite(n));
@@ -74,5 +74,28 @@ describe('hotspots', () => {
     expect(es.room.exit).toBe('Ver CV / modo simple');
     expect(en.room.enter).toBe('View the 3D room');
     expect(es.room.enter).toBe('Ver la habitación 3D');
+  });
+});
+
+describe('desk items', () => {
+  const halfW = DESK.size[0] / 2;
+  const halfD = DESK.size[1] / 2;
+
+  it.each(Object.entries(DESK_ITEMS))('%s sits fully on the desktop', (_name, item) => {
+    const [x, z] = item.at;
+    // The footprint radius covers the item at any rotation.
+    expect(x - item.radius).toBeGreaterThanOrEqual(DESK.center[0] - halfW);
+    expect(x + item.radius).toBeLessThanOrEqual(DESK.center[0] + halfW);
+    expect(z - item.radius).toBeGreaterThanOrEqual(DESK.center[1] - halfD);
+    expect(z + item.radius).toBeLessThanOrEqual(DESK.center[1] + halfD);
+  });
+
+  it('camera views and markers aim at where the items are', () => {
+    for (const id of ['pi', 'phone', 'mug'] as const) {
+      const hotspot = HOTSPOTS.find((h) => h.id === id)!;
+      const [x, z] = DESK_ITEMS[id].at;
+      expect([hotspot.view.target[0], hotspot.view.target[2]]).toEqual([x, z]);
+      expect([hotspot.marker[0], hotspot.marker[2]]).toEqual([x, z]);
+    }
   });
 });

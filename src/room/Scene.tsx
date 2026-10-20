@@ -2,7 +2,7 @@ import { Html } from '@react-three/drei';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
 import { createContext, useContext, useEffect, type ReactNode } from 'react';
 import type { Content } from '../content/profile';
-import { BOOKS, DESK_TOP, HOTSPOTS, type HotspotId, type ProjectId, type Vec3 } from './hotspots';
+import { BOOKS, DESK, DESK_TOP, HOTSPOTS, onDesk, type HotspotId, type ProjectId, type Vec3 } from './hotspots';
 import { ExperienceBody } from './panels';
 import { PALETTE as C } from './palette';
 
@@ -113,7 +113,7 @@ function Desk() {
   ];
   return (
     <group name="desk">
-      <Box size={[1.6, 0.05, 0.8]} position={[0, DESK_TOP - 0.025, -2.5]} color={C.wood} />
+      <Box size={[DESK.size[0], 0.05, DESK.size[1]]} position={[DESK.center[0], DESK_TOP - 0.025, DESK.center[1]]} color={C.wood} />
       {legs.map((p) => (
         <Box key={p.join()} size={[0.05, 0.7, 0.05]} position={p} color={C.ink} />
       ))}
@@ -169,16 +169,16 @@ function Chair() {
 
 function Pi() {
   return (
-    <group name="pi">
-      <Box size={[0.1, 0.018, 0.07]} position={[0.58, DESK_TOP + 0.009, -2.3]} color={C.paper} />
-      <Box size={[0.1, 0.017, 0.07]} position={[0.58, DESK_TOP + 0.0265, -2.3]} color={C.accent} />
+    <group name="pi" position={onDesk('pi', DESK_TOP)}>
+      <Box size={[0.1, 0.018, 0.07]} position={[0, 0.009, 0]} color={C.paper} />
+      <Box size={[0.1, 0.017, 0.07]} position={[0, 0.0265, 0]} color={C.accent} />
     </group>
   );
 }
 
 function Phone() {
   return (
-    <group name="phone" position={[-0.42, DESK_TOP + 0.005, -2.06]} rotation={[0, 0.25, 0]}>
+    <group name="phone" position={onDesk('phone', DESK_TOP + 0.005)} rotation={[0, 0.25, 0]}>
       <Box size={[0.075, 0.01, 0.15]} position={[0, 0, 0]} color={C.ink} />
       <Box size={[0.066, 0.002, 0.135]} position={[0, 0.006, 0]} color={C.inkSoft} />
     </group>
@@ -187,7 +187,7 @@ function Phone() {
 
 function Mug() {
   return (
-    <group name="mug" position={[0.36, DESK_TOP + 0.05, -1.98]}>
+    <group name="mug" position={onDesk('mug', DESK_TOP + 0.05)}>
       <Cyl size={[0.04, 0.04, 0.1]} position={[0, 0, 0]} color={C.paper} />
       <Cyl size={[0.0405, 0.0405, 0.025]} position={[0, 0.015, 0]} color={C.accent} />
       <Box size={[0.012, 0.06, 0.02]} position={[0.048, 0, 0]} color={C.paper} />
@@ -297,9 +297,9 @@ function Markers({ onSelect }: { onSelect: (id: HotspotId) => void }) {
 }
 
 const HITS: Partial<Record<HotspotId, { size: Vec3; position: Vec3 }>> = {
-  pi: { size: [0.32, 0.22, 0.3], position: [0.58, DESK_TOP + 0.08, -2.3] },
-  phone: { size: [0.3, 0.2, 0.34], position: [-0.42, DESK_TOP + 0.08, -2.06] },
-  mug: { size: [0.26, 0.28, 0.26], position: [0.36, DESK_TOP + 0.1, -1.98] },
+  pi: { size: [0.32, 0.22, 0.3], position: onDesk('pi', DESK_TOP + 0.08) },
+  phone: { size: [0.3, 0.2, 0.34], position: onDesk('phone', DESK_TOP + 0.08) },
+  mug: { size: [0.26, 0.28, 0.26], position: onDesk('mug', DESK_TOP + 0.1) },
 };
 
 export interface SceneProps {
