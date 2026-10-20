@@ -2,47 +2,47 @@ import { describe, expect, it } from 'vitest';
 import {
   BOOT_CLAIM_KEY,
   BOOT_TIMEOUT_MS,
-  FINE_POINTER_QUERY,
-  LOAD_TIMEOUT_MS,
   GATE_SCRIPT,
+  LOAD_TIMEOUT_MS,
+  MIN_DEVICE_MEMORY_GB,
   MODE_KEY,
-  ROOM_MIN_WIDTH,
   parseSavedMode,
   shouldAutoStartRoom,
   type GateEnv,
 } from '../src/lib/mode';
 
-const desktop: GateEnv = { width: 1440, finePointer: true, webgl: true, saved: null };
+const anyDevice: GateEnv = { webgl: true, saved: null, saveData: false, deviceMemory: undefined };
 
 describe('shouldAutoStartRoom', () => {
-  it('starts on a desktop with a fine pointer, WebGL and no saved preference', () => {
-    expect(shouldAutoStartRoom(desktop)).toBe(true);
+  it('starts by default on any device with WebGL, phones included', () => {
+    expect(shouldAutoStartRoom(anyDevice)).toBe(true);
+    expect(shouldAutoStartRoom({ ...anyDevice, deviceMemory: 8 })).toBe(true);
   });
 
-  it('starts on a desktop that saved "room"', () => {
-    expect(shouldAutoStartRoom({ ...desktop, saved: 'room' })).toBe(true);
+  it('starts when the visitor saved "room"', () => {
+    expect(shouldAutoStartRoom({ ...anyDevice, saved: 'room' })).toBe(true);
   });
 
   it('never starts when the visitor chose simple mode', () => {
-    expect(shouldAutoStartRoom({ ...desktop, saved: 'simple' })).toBe(false);
-  });
-
-  it('does not auto-start on a phone even after it saved "room"', () => {
-    expect(shouldAutoStartRoom({ width: 390, finePointer: false, webgl: true, saved: 'room' })).toBe(false);
+    expect(shouldAutoStartRoom({ ...anyDevice, saved: 'simple' })).toBe(false);
   });
 
   it('does not start without WebGL', () => {
-    expect(shouldAutoStartRoom({ ...desktop, webgl: false })).toBe(false);
+    expect(shouldAutoStartRoom({ ...anyDevice, webgl: false })).toBe(false);
   });
 
-  it('needs at least 1024 px of width', () => {
-    expect(ROOM_MIN_WIDTH).toBe(1024);
-    expect(shouldAutoStartRoom({ ...desktop, width: 1023 })).toBe(false);
-    expect(shouldAutoStartRoom({ ...desktop, width: 1024 })).toBe(true);
+  it('does not start when the browser asks to save data', () => {
+    expect(shouldAutoStartRoom({ ...anyDevice, saveData: true })).toBe(false);
   });
 
-  it('does not start with a coarse pointer on a wide screen', () => {
-    expect(shouldAutoStartRoom({ ...desktop, finePointer: false })).toBe(false);
+  it('does not start on devices that report less than 4 GB of memory', () => {
+    expect(MIN_DEVICE_MEMORY_GB).toBe(4);
+    expect(shouldAutoStartRoom({ ...anyDevice, deviceMemory: 2 })).toBe(false);
+    expect(shouldAutoStartRoom({ ...anyDevice, deviceMemory: 4 })).toBe(true);
+  });
+
+  it('starts when the device does not report its memory (Safari, Firefox)', () => {
+    expect(shouldAutoStartRoom({ ...anyDevice, deviceMemory: undefined })).toBe(true);
   });
 });
 
@@ -63,8 +63,15 @@ interface FakeRun {
   timers: { fn: () => void; ms: number }[];
 }
 
+interface FakeOpts {
+  storageThrows?: boolean;
+  canvasThrows?: boolean;
+  /** Browsers without the Network Information API have no navigator.connection. */
+  noConnection?: boolean;
+}
+
 /** Runs the inline gate against a fake browser and reports what it decided. */
-function runGate(env: GateEnv, opts: { storageThrows?: boolean; canvasThrows?: boolean } = {}): FakeRun {
+function runGate(env: GateEnv, opts: FakeOpts = {}): FakeRun {
   const dataset: Record<string, string> = {};
   const timers: FakeRun['timers'] = [];
   const setTimeout = (fn: () => void, ms: number) => {
@@ -85,23 +92,25 @@ function runGate(env: GateEnv, opts: { storageThrows?: boolean; canvasThrows?: b
       return key === MODE_KEY ? env.saved : null;
     },
   };
-  const matchMedia = (query: string) => ({ matches: query === FINE_POINTER_QUERY && env.finePointer });
-  new Function('document', 'localStorage', 'innerWidth', 'matchMedia', 'setTimeout', GATE_SCRIPT)(
+  const navigator = {
+    deviceMemory: env.deviceMemory,
+    connection: opts.noConnection ? undefined : { saveData: env.saveData },
+  };
+  new Function('document', 'localStorage', 'navigator', 'setTimeout', GATE_SCRIPT)(
     document,
     localStorage,
-    env.width,
-    matchMedia,
+    navigator,
     setTimeout,
   );
   return { room: dataset.room, webglChecked, dataset, timers };
 }
 
 describe('inline gate script', () => {
-  const widths = [390, 1023, 1024, 1920];
   const saved = [null, 'room', 'simple'] as const;
-  const cases: GateEnv[] = widths.flatMap((width) =>
-    [true, false].flatMap((finePointer) =>
-      [true, false].flatMap((webgl) => saved.map((s) => ({ width, finePointer, webgl, saved: s }))),
+  const memory = [undefined, 1, 2, 4, 8];
+  const cases: GateEnv[] = [true, false].flatMap((webgl) =>
+    [true, false].flatMap((saveData) =>
+      memory.flatMap((deviceMemory) => saved.map((s) => ({ webgl, saveData, deviceMemory, saved: s }))),
     ),
   );
 
@@ -115,17 +124,22 @@ describe('inline gate script', () => {
   });
 
   it('skips the WebGL probe when the room cannot auto-start anyway', () => {
-    expect(runGate({ width: 390, finePointer: false, webgl: true, saved: null }).webglChecked).toBe(false);
-    expect(runGate({ ...desktop, saved: 'simple' }).webglChecked).toBe(false);
+    expect(runGate({ ...anyDevice, saved: 'simple' }).webglChecked).toBe(false);
+    expect(runGate({ ...anyDevice, saveData: true }).webglChecked).toBe(false);
+    expect(runGate({ ...anyDevice, deviceMemory: 2 }).webglChecked).toBe(false);
+  });
+
+  it('works in browsers without navigator.connection', () => {
+    expect(runGate(anyDevice, { noConnection: true }).room).toBe('boot');
   });
 
   it('falls back to the simple page when storage or canvas throws', () => {
-    expect(runGate(desktop, { storageThrows: true }).room).toBe('boot');
-    expect(runGate(desktop, { canvasThrows: true }).room).toBeUndefined();
+    expect(runGate(anyDevice, { storageThrows: true }).room).toBe('boot');
+    expect(runGate(anyDevice, { canvasThrows: true }).room).toBeUndefined();
   });
 
   it('uncovers the page if the boot script never claims the loading screen', () => {
-    const run = runGate(desktop);
+    const run = runGate(anyDevice);
     expect(run.timers).toHaveLength(1);
     expect(run.timers[0].ms).toBe(BOOT_TIMEOUT_MS);
     run.timers[0].fn();
@@ -133,14 +147,14 @@ describe('inline gate script', () => {
   });
 
   it('leaves the loading screen alone once the boot script has claimed it', () => {
-    const run = runGate(desktop);
+    const run = runGate(anyDevice);
     run.dataset[BOOT_CLAIM_KEY] = '1';
     run.timers[0].fn();
     expect(run.dataset.room).toBe('boot');
   });
 
   it('schedules no fallback when the room does not auto-start', () => {
-    expect(runGate({ ...desktop, saved: 'simple' }).timers).toHaveLength(0);
+    expect(runGate({ ...anyDevice, saved: 'simple' }).timers).toHaveLength(0);
   });
 });
 

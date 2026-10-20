@@ -3,9 +3,8 @@ export type SavedMode = 'room' | 'simple';
 
 /** localStorage key holding a SavedMode. */
 export const MODE_KEY = 'mode';
-/** Narrowest viewport (CSS px) that auto-starts the room. */
-export const ROOM_MIN_WIDTH = 1024;
-export const FINE_POINTER_QUERY = '(pointer: fine)';
+/** Devices reporting less memory than this (navigator.deviceMemory, Chromium only) start simple. */
+export const MIN_DEVICE_MEMORY_GB = 4;
 /** dataset key boot.ts sets on <html> to claim the loading screen the inline gate showed. */
 export const BOOT_CLAIM_KEY = 'roomBoot';
 /** If boot.ts has not claimed the loading screen by then, the inline gate uncovers the page. */
@@ -14,10 +13,12 @@ export const BOOT_TIMEOUT_MS = 6000;
 export const LOAD_TIMEOUT_MS = 20000;
 
 export interface GateEnv {
-  width: number;
-  finePointer: boolean;
   webgl: boolean;
   saved: SavedMode | null;
+  /** navigator.connection.saveData: the visitor asked the browser to save data. */
+  saveData: boolean;
+  /** navigator.deviceMemory in GB; undefined where the browser does not report it. */
+  deviceMemory: number | undefined;
 }
 
 export function parseSavedMode(value: unknown): SavedMode | null {
@@ -25,19 +26,23 @@ export function parseSavedMode(value: unknown): SavedMode | null {
 }
 
 /**
- * Whether the room opens by itself on load. Only wide screens with a mouse or trackpad and
- * WebGL, and never after the visitor chose the simple page. A saved "room" on a phone does
- * not auto-start: there the explicit "View the 3D room" button is the way in.
+ * Whether the room opens by itself on load. It does by default on every device with WebGL,
+ * phones included, except when the visitor chose the simple page, the browser asks to save
+ * data, or the device reports little memory. Browsers that report neither (Safari, Firefox)
+ * get the room.
  */
-export function shouldAutoStartRoom({ width, finePointer, webgl, saved }: GateEnv): boolean {
-  return saved !== 'simple' && width >= ROOM_MIN_WIDTH && finePointer && webgl;
+export function shouldAutoStartRoom({ webgl, saved, saveData, deviceMemory }: GateEnv): boolean {
+  if (saved === 'simple' || saveData) return false;
+  if (deviceMemory !== undefined && deviceMemory < MIN_DEVICE_MEMORY_GB) return false;
+  return webgl;
 }
 
 /**
  * The same decision, inlined in <head> so the loading screen shows before first paint.
  * Built from the constants above; tests run it against shouldAutoStartRoom.
- * The WebGL probe runs last, so phones and simple-mode visitors never create a context.
+ * The WebGL probe runs last, so visitors who start simple never create a context.
+ * `undefined < 4` is false, so browsers without navigator.deviceMemory pass the memory check.
  * If boot.ts never runs (blocked or failed script), a timer uncovers the page after
  * BOOT_TIMEOUT_MS instead of leaving the loading screen up forever.
  */
-export const GATE_SCRIPT = `(()=>{var s=null;try{s=localStorage.getItem('${MODE_KEY}')}catch(e){}if(s==='simple'||innerWidth<${ROOM_MIN_WIDTH}||!matchMedia('${FINE_POINTER_QUERY}').matches)return;try{var g=document.createElement('canvas'),c=g.getContext('webgl2')||g.getContext('webgl');if(!c)return;var x=c.getExtension('WEBGL_lose_context');x&&x.loseContext();var d=document.documentElement.dataset;d.room='boot';setTimeout(function(){if(d.room==='boot'&&!d.${BOOT_CLAIM_KEY})delete d.room},${BOOT_TIMEOUT_MS})}catch(e){}})()`;
+export const GATE_SCRIPT = `(()=>{var s=null;try{s=localStorage.getItem('${MODE_KEY}')}catch(e){}var n=navigator,k=n.connection;if(s==='simple'||k&&k.saveData||n.deviceMemory<${MIN_DEVICE_MEMORY_GB})return;try{var g=document.createElement('canvas'),c=g.getContext('webgl2')||g.getContext('webgl');if(!c)return;var x=c.getExtension('WEBGL_lose_context');x&&x.loseContext();var d=document.documentElement.dataset;d.room='boot';setTimeout(function(){if(d.room==='boot'&&!d.${BOOT_CLAIM_KEY})delete d.room},${BOOT_TIMEOUT_MS})}catch(e){}})()`;

@@ -42,10 +42,11 @@ The window view is daytime only; a night variant (lit windows, dark sky) is a fu
 
 ## Mobile
 
-- Phones start in simple mode, with a "View the 3D room" button to opt in.
+- The room opens by default on phones too (decided after the blockout; it replaced "phones
+  start in simple mode"). Phones start simple only under the gate's exceptions below.
 - Detect by capability, never by user agent: `(pointer: coarse)`, viewport width,
-  WebGL availability.
-- Opt-in 3D on phones:
+  WebGL availability, Save-Data, device memory.
+- 3D on phones:
   - No hover: show visible pulsing markers on every clickable object.
   - The four desk objects share one "Desk" marker in the overview; it opens a desk view
     (no panel) where their own markers spread out. Back from a desk object opened there returns
@@ -66,11 +67,13 @@ The room mounts **on top of the simple page, at the same URL**. `/` and `/es/` s
 static HTML they were in phase 1 (SEO, Open Graph previews, phones); the room is an overlay
 that a small gate decides to open.
 
-**Gate rules** (`src/lib/mode.ts`, `shouldAutoStartRoom`): auto-start only when the
-viewport is at least 1024 px wide, `(pointer: fine)` matches, WebGL works, and the saved
-preference is not `"simple"`. The preference lives in `localStorage.mode`
-(`"room"` | `"simple"`), every access in try/catch. A saved `"room"` never auto-starts on a
-phone; there the "View the 3D room" button is the way in.
+**Gate rules** (`src/lib/mode.ts`, `shouldAutoStartRoom`): the room auto-starts on every
+device where WebGL works, phones included, except when the saved preference is `"simple"`,
+the browser asks to save data (`navigator.connection.saveData`), or it reports less than
+4 GB of memory (`navigator.deviceMemory`). Both signals exist only in Chromium browsers;
+Safari and Firefox report neither and always get the room. The preference lives in
+`localStorage.mode` (`"room"` | `"simple"`), every access in try/catch. Anyone who starts
+simple can still open the room with the "View the 3D room" button.
 
 **Loading path**
 
