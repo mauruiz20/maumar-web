@@ -91,7 +91,8 @@ export const HOTSPOTS: readonly Hotspot[] = [
   {
     id: 'phone',
     objects: ['phone'],
-    view: { position: [-0.3, 1.28, -1.64], target: onDesk('phone', DESK_TOP) },
+    // From the left of the desk: the chair (x within ±0.24) would block a view from the front.
+    view: { position: [-0.66, 1.22, -1.82], target: onDesk('phone', DESK_TOP) },
     content: { kind: 'contact' },
     marker: onDesk('phone', DESK_TOP + 0.14),
   },
