@@ -27,10 +27,11 @@ The simple mode (phase 1) is the same content as plain HTML and is always one cl
 | Phone | Lifts towards the camera | Contact + CV download | Kenney or Quaternius |
 | Mug | Short zoom on the desk | Education: Computer Engineering, UNT, 2019–2023 | Kenney or Quaternius + logo decal |
 | Lamp | Toggles on/off | Easter egg, or light/dark theme toggle | Kenney |
-| Window | — | Decoration (Tucumán sky, day/night) | Box + texture |
+| Window | — | Decoration: low-poly city and mountains outside (daytime) | Generated in code |
 | Plant, rug, frame | — | Visual filler, not clickable | Kenney |
 
 The mug carries a decal (transparent PNG) of the real "Ingeniería en Computación" mug logo.
+The window view is daytime only; a night variant (lit windows, dark sky) is a future idea.
 
 ## Asset licenses
 
@@ -111,6 +112,7 @@ portrait camera. Desktop dpr is [1, 2]; no post-processing, no shadows yet.
 | `src/room/Scene.tsx` | Blockout primitives, hover highlight, markers, monitor `<Html>` |
 | `src/room/CameraRig.tsx` | Orbit limits, GSAP camera moves, panel-aware framing |
 | `src/room/hotspots.ts` | Hotspots as data: objects, camera views, content, markers, books |
+| `src/room/city.ts`, `Outside.tsx` | Seeded city and mountain generators (pure, tested); the view through the window, drawn only inside a stencil mask of the opening |
 | `src/room/panels.tsx` | Renders hotspot content from the en/es content objects |
 | `src/room/palette.ts`, `room.css` | Blockout colours; room UI styles (site tokens) |
 

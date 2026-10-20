@@ -37,6 +37,8 @@ export interface Hotspot {
 export const DESK_TOP = 0.75;
 /** Desktop footprint on the floor plane: centre [x, z] and size [width, depth]. */
 export const DESK = { center: [0, -2.5], size: [1.6, 0.8] } as const;
+/** The back-wall window's opening: centre [x, y] and size [width, height], in the plane z = -3. */
+export const WINDOW = { center: [0.9, 1.55], size: [1.4, 1.2] } as const;
 
 /**
  * Small objects on the desk: floor-plane position [x, z] and a footprint radius that covers

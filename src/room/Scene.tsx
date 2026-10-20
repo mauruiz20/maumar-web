@@ -2,7 +2,8 @@ import { Html } from '@react-three/drei';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
 import { createContext, useContext, useEffect, type ReactNode } from 'react';
 import type { Content } from '../content/profile';
-import { BOOKS, DESK, DESK_TOP, HOTSPOTS, onDesk, type HotspotId, type ProjectId, type Vec3 } from './hotspots';
+import { BOOKS, DESK, DESK_TOP, HOTSPOTS, WINDOW, onDesk, type HotspotId, type ProjectId, type Vec3 } from './hotspots';
+import { Outside } from './Outside';
 import { ExperienceBody } from './panels';
 import { PALETTE as C } from './palette';
 
@@ -94,11 +95,35 @@ function Clickable({ id, hovered, onHover, onClick, hit, coarse, children }: Cli
   );
 }
 
+/** Window opening edges in the back wall. */
+const OPENING = {
+  left: WINDOW.center[0] - WINDOW.size[0] / 2,
+  right: WINDOW.center[0] + WINDOW.size[0] / 2,
+  bottom: WINDOW.center[1] - WINDOW.size[1] / 2,
+  top: WINDOW.center[1] + WINDOW.size[1] / 2,
+};
+
+/** The back wall (x from -3 to 3, 3 m high, 0.1 m thick) as four pieces around the window. */
+function BackWall() {
+  const { left, right, bottom, top } = OPENING;
+  const [cx] = WINDOW.center;
+  const [w] = WINDOW.size;
+  const z = -3.05;
+  return (
+    <>
+      <Box size={[left + 3, 3, 0.1]} position={[(left - 3) / 2, 1.5, z]} color={C.wallBack} />
+      <Box size={[3 - right, 3, 0.1]} position={[(right + 3) / 2, 1.5, z]} color={C.wallBack} />
+      <Box size={[w, bottom, 0.1]} position={[cx, bottom / 2, z]} color={C.wallBack} />
+      <Box size={[w, 3 - top, 0.1]} position={[cx, (top + 3) / 2, z]} color={C.wallBack} />
+    </>
+  );
+}
+
 function Room() {
   return (
     <group name="room">
       <Box size={[6, 0.1, 6]} position={[0, -0.05, 0]} color={C.floor} />
-      <Box size={[6, 3, 0.1]} position={[0, 1.5, -3.05]} color={C.wallBack} />
+      <BackWall />
       <Box size={[0.1, 3, 6]} position={[-3.05, 1.5, 0]} color={C.wallLeft} />
     </group>
   );
@@ -257,14 +282,39 @@ function Whiteboard() {
   );
 }
 
+/**
+ * Frame lining the opening (its bars reach 1 cm into the opening, so no face is coplanar with
+ * the wall's), a cross of mullions, and faint glass that never takes a click.
+ */
+function Window() {
+  const { left, right, bottom, top } = OPENING;
+  const [cx, cy] = WINDOW.center;
+  const [w, h] = WINDOW.size;
+  /** How far the frame shows on the wall around the opening, and the bar width. */
+  const out = 0.06;
+  const bar = out + 0.01;
+  const mullion = 0.035;
+  const lining = { depth: 0.14, z: -3.03 };
+  return (
+    <group name="window">
+      <Box size={[w + 2 * out, bar, lining.depth]} position={[cx, top + out - bar / 2, lining.z]} color={C.paper} />
+      <Box size={[w + 2 * out, bar, lining.depth]} position={[cx, bottom - out + bar / 2, lining.z]} color={C.paper} />
+      <Box size={[bar, h, lining.depth]} position={[left - out + bar / 2, cy, lining.z]} color={C.paper} />
+      <Box size={[bar, h, lining.depth]} position={[right + out - bar / 2, cy, lining.z]} color={C.paper} />
+      <Box size={[mullion, h, mullion]} position={[cx, cy, -3.0]} color={C.paper} />
+      <Box size={[w, mullion, mullion]} position={[cx, cy, -3.0]} color={C.paper} />
+      <mesh position={[cx, cy, -3.0]} raycast={() => null}>
+        <boxGeometry args={[w, h, 0.006]} />
+        <meshBasicMaterial color={C.glass} transparent opacity={0.15} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+
 function Decor() {
   return (
     <>
-      <group name="window">
-        <Box size={[1.0, 0.9, 0.04]} position={[1.5, 1.6, -2.98]} color={C.paper} />
-        <Box size={[0.9, 0.8, 0.02]} position={[1.5, 1.6, -2.955]} color={C.sky} emissive={C.sky} />
-        <Box size={[0.03, 0.8, 0.03]} position={[1.5, 1.6, -2.95]} color={C.paper} />
-      </group>
+      <Window />
       <group name="frame">
         <Box size={[0.03, 0.4, 0.5]} position={[-2.985, 1.65, 1.0]} color={C.ink} />
         <Box size={[0.01, 0.32, 0.42]} position={[-2.968, 1.65, 1.0]} color={C.accentSoft} />
@@ -352,6 +402,7 @@ export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSel
         <Lamp on={lampOn} />
       </Clickable>
       <Decor />
+      <Outside />
       {coarse && !active && <Markers onSelect={onSelect} />}
     </>
   );

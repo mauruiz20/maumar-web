@@ -15,7 +15,9 @@ export const PALETTE = {
   paper: '#f5f6f3',
   accent: '#b4245f',
   accentSoft: '#f28db7',
+  /** Sky overhead, outside the window; the window glass tint. */
   sky: '#9cc4d8',
+  glass: '#cfe6ef',
   leaf: '#4f7a5a',
   rug: '#c27a95',
   /** Hover highlight (emissive). */

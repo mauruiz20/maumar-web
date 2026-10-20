@@ -63,10 +63,13 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
       <div className="room-stage">
         <Canvas
           dpr={coarse ? [1, 1.5] : [1, 2]}
+          // The view out of the window is drawn through a stencil mask (Outside.tsx).
+          gl={{ stencil: true }}
           camera={{
             fov: portrait ? FOV.portrait : FOV.landscape,
             near: 0.05,
-            far: 50,
+            // The sky outside the window has a 150 m radius.
+            far: 180,
             position: [...overview.position],
           }}
           onCreated={() => onReady()}
