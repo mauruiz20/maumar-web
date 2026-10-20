@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 147 100" width="147" height="100">
+  <!-- Original icon for the room's mug (drawn for this site): a laptop with 1/0 digits
+       rising from its screen under an arc of connected nodes. Site palette only. -->
+  <g fill="none" stroke="#f28db7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15 45 L38 21 L73.5 12 L109 21 L132 45" />
+    <path d="M38 21 L51 29 M109 21 L96 29" />
+  </g>
+  <g fill="#b4245f">
+    <circle cx="15" cy="45" r="5.5" />
+    <circle cx="73.5" cy="12" r="5.5" />
+    <circle cx="132" cy="45" r="5.5" />
+  </g>
+  <g fill="#f5f6f3" stroke="#b4245f" stroke-width="3">
+    <circle cx="38" cy="21" r="5" />
+    <circle cx="109" cy="21" r="5" />
+  </g>
+  <!-- The digits: two "1" and two "0", rising from the screen. -->
+  <g fill="#b4245f">
+    <rect x="58" y="33" width="3.5" height="11" />
+    <rect x="55.5" y="33" width="4" height="3" />
+    <rect x="84" y="30" width="3.5" height="11" />
+    <rect x="81.5" y="30" width="4" height="3" />
+  </g>
+  <g fill="none" stroke="#5a6560" stroke-width="3">
+    <rect x="66.5" y="23" width="8" height="12" rx="3.5" />
+    <rect x="72" y="37.5" width="7" height="8" rx="3" />
+  </g>
+  <!-- The laptop: screen and keyboard base. -->
+  <rect x="49" y="47" width="49" height="30" rx="3" fill="#1c2421" />
+  <rect x="53.5" y="51" width="40" height="21.5" rx="1.5" fill="#5a6560" />
+  <path d="M41 79 H106 L114 88 H33 Z" fill="#2c3531" />
+  <rect x="65" y="82" width="17" height="2.5" rx="1" fill="#5a6560" />
+</svg>

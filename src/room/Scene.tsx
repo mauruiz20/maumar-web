@@ -10,6 +10,8 @@ import type { ModelId } from './models';
 import type { MarkerId } from './nav';
 import { Highlight } from './highlight';
 import { ContactShadow } from './ContactShadow';
+import { MugDecal } from './MugDecal';
+import { MUG } from './mugModel';
 import { Outside } from './Outside';
 import { RaspberryPi } from './RaspberryPi';
 import { SHADOWS } from './shadows';
@@ -267,9 +269,10 @@ function Phone() {
 function Mug() {
   return (
     <group name="mug" position={onDesk('mug', DESK_TOP + 0.05)}>
-      <Cyl size={[0.04, 0.04, 0.1]} position={[0, 0, 0]} color={C.paper} />
-      <Cyl size={[0.0405, 0.0405, 0.025]} position={[0, 0.015, 0]} color={C.accent} />
-      <Box size={[0.012, 0.06, 0.02]} position={[0.048, 0, 0]} color={C.paper} />
+      <Cyl size={[MUG.radius, MUG.radius, MUG.height]} position={[0, 0, 0]} color={C.paper} />
+      <Cyl size={[MUG.band.radius, MUG.band.radius, MUG.band.height]} position={[0, MUG.band.y, 0]} color={C.accent} />
+      <Box size={[MUG.handle.width, MUG.handle.height, MUG.handle.depth]} position={[MUG.handle.x, 0, 0]} color={C.paper} />
+      <MugDecal />
     </group>
   );
 }

@@ -25,12 +25,15 @@ The simple mode (phase 1) is the same content as plain HTML and is always one cl
 | Whiteboard | Front view | Skills grouped by area | Box + texture |
 | Raspberry Pi | Zoom on the desk | Home server: hardware, Cloudflare Tunnel, what runs on it | Procedural (owner's Pi 5 in an Argon NEO 5 M.2 case) |
 | Phone | Lifts towards the camera | Contact + CV download | Boxes |
-| Mug | Short zoom on the desk | Education: Computer Engineering, UNT, 2019–2023 | Cylinders (+ logo decal later) |
+| Mug | Short zoom on the desk | Education: Computer Engineering, UNT, 2019–2023 | Cylinders + an original printed icon (`mugIcon.svg`) |
 | Lamp | Toggles on/off | Easter egg, or light/dark theme toggle | Kenney `lampRoundTable` |
 | Window | Camera moves to the window | No panel: the city and mountains outside | Generated in code |
 | Plant, rug, frame | — | Visual filler, not clickable | Kenney `pottedPlant`, `rugRectangle`; frame is boxes |
 
-The mug carries a decal (transparent PNG) of the real "Ingeniería en Computación" mug logo.
+The mug carries an original icon drawn for this site (`src/room/mugIcon.svg`: a laptop, rising
+1/0 digits and an arc of connected nodes, in the site palette), on the same generic idea as the
+owner's real mug but not a copy of its clip-art, whose licence is unknown. `MugDecal.tsx`
+rasterises it once to a canvas texture on a thin cylinder segment facing the mug close-up.
 The window view is daytime only; a night variant (lit windows, dark sky) is a future idea.
 
 ## Asset licenses
@@ -143,6 +146,7 @@ sky and window never end up in them.
 | `src/room/models.ts`, `layout.ts`, `assets.ts`, `progress.ts` | Model manifest; fitted placements and model geometry; model loading (useLoader + GLTFLoader) and progress for the loading screen |
 | `src/room/piModel.ts`, `RaspberryPi.tsx` | The Pi as procedural parts (sizes, empty ports, a breathing green status LED; no cables in the room, for consistency; tested in Node) and its component |
 | `src/room/shadows.ts`, `ContactShadow.tsx` | The two static contact shadows: planes, capture cameras (pure, tested), one-time capture and disposal |
+| `src/room/mugIcon.svg`, `mugModel.ts`, `MugDecal.tsx` | The mug's printed icon (hand-written SVG, tested), its decal placement and the texture/mesh |
 | `src/room/nav.ts`, `menu.ts` | Back stack, desk group and which touch markers show; object menu layout |
 | `src/room/city.ts`, `Outside.tsx` | Seeded city and mountain generators (pure, tested); the view through the window, drawn only inside a stencil mask of the opening |
 | `src/room/panels.tsx` | Renders hotspot content from the en/es content objects |
