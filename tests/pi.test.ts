@@ -1,27 +1,10 @@
 import { Box3 } from 'three';
 import { describe, expect, it } from 'vitest';
-import { DESK, DESK_ITEMS, DESK_TOP, hotspotById } from '../src/room/hotspots';
+import { DESK_ITEMS, DESK_TOP, hotspotById } from '../src/room/hotspots';
 import { PALETTE } from '../src/room/palette';
-import { PLACEMENTS, LAMP_BULB } from '../src/room/layout';
-import {
-  BRICK,
-  OUTLET,
-  PI,
-  PI_PARTS,
-  PI_PLACEMENT,
-  WALL_PARTS,
-  WALL_Z,
-  partGeometry,
-  piToWorld,
-  powerCableCurve,
-  powerCableGeometry,
-  powerCablePath,
-  triangleCount,
-  usbcPlugEnd,
-} from '../src/room/piModel';
+import * as piModel from '../src/room/piModel';
+import { LED, PI, PI_LED, PI_PARTS, PI_PLACEMENT, ledIntensity, partGeometry, piToWorld, triangleCount } from '../src/room/piModel';
 
-/** The monitor (and its stand) spans x within ±0.31 m: the cable keeps right of it. */
-const MONITOR_CLEARANCE = 0.32;
 const caseParts = PI_PARTS.filter((p) => p.group === 'case');
 
 function boundsOf(parts: typeof PI_PARTS): Box3 {
@@ -93,61 +76,62 @@ describe('Raspberry Pi model', () => {
     }
   });
 
-  it('has no Ethernet cable or plug: the RJ45 port is empty', () => {
-    expect(PI_PARTS.some((p) => /yellow/i.test(p.color) || p.name === 'rj45-plug')).toBe(false);
+  it('has no cables in the room: both ports are empty openings', () => {
+    expect(PI_PARTS.some((p) => /yellow/i.test(p.color) || /plug|cable/.test(p.name))).toBe(false);
     expect('cableYellow' in PALETTE).toBe(false);
+    for (const gone of ['powerCablePath', 'powerCableGeometry', 'WALL_PARTS', 'OUTLET', 'BRICK', 'usbcPlugEnd']) {
+      expect(gone in piModel, gone).toBe(false);
+    }
     expect(PI_PARTS.find((p) => p.name === 'rj45-hole')?.color).toBe('ink');
+    const usbc = PI_PARTS.find((p) => p.name === 'usbc-hole')!;
+    expect(usbc.color).toBe('ink');
+    // A small opening on the left side wall.
+    expect(Math.abs(usbc.position[0] + PI.width / 2)).toBeLessThan(0.001);
   });
 
-  it('runs the black USB-C power cable along the desk, off its back edge, down to the brick', () => {
-    const points = powerCableCurve().getPoints(200).map((v) => [v.x, v.y, v.z] as const);
-    const [mx, mz] = DESK_ITEMS.mug.at;
-    const [px, pz] = DESK_ITEMS.pi.at;
-    const back = DESK.center[1] - DESK.size[1] / 2;
-    const lamp = PLACEMENTS.lampRoundTable.position;
-    // It starts at the USB-C plug and ends in the bottom of the power brick.
-    expect(Math.hypot(...points[0]!.map((v, k) => v - usbcPlugEnd()[k]!))).toBeLessThan(1e-6);
-    const end = points.at(-1)!;
-    expect(Math.abs(end[0] - OUTLET.x)).toBeLessThan(0.01);
-    expect(Math.abs(end[1] - (OUTLET.y - BRICK.size[1] / 2))).toBeLessThan(0.003);
-    for (const [i, [x, y, z]] of points.entries()) {
-      if (z > back + 0.005) expect(y, `sample ${i}`).toBeGreaterThanOrEqual(DESK_TOP + PI.powerCableRadius - 0.003);
-      expect(Math.hypot(x - mx, z - mz), `sample ${i}`).toBeGreaterThan(DESK_ITEMS.mug.radius + PI.powerCableRadius);
-      expect(Math.abs(x), `sample ${i}`).toBeGreaterThan(MONITOR_CLEARANCE);
-      expect(Math.hypot(x - lamp[0], z - lamp[2]), `sample ${i}`).toBeGreaterThan(0.2);
-      expect(Math.hypot(x - LAMP_BULB[0], z - LAMP_BULB[2])).toBeGreaterThan(0.2);
-      // Clear of the case: past the plug, outside the case footprint.
-      if (i > 20) expect(Math.hypot(x - px, z - pz), `sample ${i}`).toBeGreaterThan(DESK_ITEMS.pi.radius);
-      // Never inside the wall.
-      expect(z, `sample ${i}`).toBeGreaterThan(WALL_Z + PI.powerCableRadius);
+  it('has a tiny status LED on the port-end face, facing the Pi close-up', () => {
+    const g = partGeometry(PI_LED);
+    g.computeBoundingBox();
+    const b = g.boundingBox!;
+    // 2–3 mm across.
+    for (const size of [b.max.x - b.min.x, b.max.y - b.min.y]) {
+      expect(size).toBeGreaterThanOrEqual(0.002);
+      expect(size).toBeLessThanOrEqual(0.003);
     }
-    expect(powerCablePath().length).toBeGreaterThan(6);
+    // On the front face (z = length / 2), within 1 mm, and inside the face's outline.
+    expect(Math.abs(b.min.z - PI.length / 2)).toBeLessThanOrEqual(0.001);
+    expect(b.max.z - PI.length / 2).toBeLessThanOrEqual(0.001);
+    expect(Math.abs(PI_LED.position[0])).toBeLessThan(PI.width / 2 - PI.shellRadius);
+    expect(PI_LED.position[1]).toBeGreaterThan(PI.feet + PI.base);
+    expect(PI_LED.position[1]).toBeLessThan(PI.height);
+    // Its face points at the close-up camera within 60°.
+    const v = hotspotById('pi').view;
+    const led = piToWorld(PI_LED.position);
+    const normal = [Math.sin(PI_PLACEMENT.rotationY), 0, Math.cos(PI_PLACEMENT.rotationY)];
+    const to = v.position.map((p, k) => p - led[k]!);
+    const cos = (normal[0]! * to[0]! + normal[2]! * to[2]!) / Math.hypot(...to);
+    expect(cos).toBeGreaterThan(Math.cos(Math.PI / 3));
   });
 
-  it('plugs the brick into a socket on the back wall, low and under the desk', () => {
-    const socket = WALL_PARTS.find((p) => p.name === 'socket')!;
-    const brick = WALL_PARTS.find((p) => p.name === 'brick')!;
-    const sb = boundsOf([socket]);
-    const bb = boundsOf([brick]);
-    expect(sb.min.z).toBeCloseTo(WALL_Z, 6);
-    expect(bb.min.z).toBeCloseTo(sb.max.z, 6);
-    for (const b of [sb, bb]) {
-      expect(b.max.y).toBeLessThan(DESK_TOP - 0.2);
-      expect(b.min.y).toBeGreaterThan(0.05);
-      expect(b.min.x).toBeGreaterThan(DESK.center[0] - DESK.size[0] / 2 + 0.1);
-      expect(b.max.x).toBeLessThan(DESK.center[0] + DESK.size[0] / 2 - 0.1);
+  it('breathes the LED softly between its limits, and holds it steady under reduced motion', () => {
+    const samples = Array.from({ length: 400 }, (_, i) => ledIntensity(i * 0.025, false));
+    for (const v of samples) {
+      expect(v).toBeGreaterThanOrEqual(LED.min);
+      expect(v).toBeLessThanOrEqual(LED.max);
     }
-    // The brick is centred on its socket.
-    expect(Math.abs((bb.min.x + bb.max.x) / 2 - OUTLET.x)).toBeLessThan(1e-6);
-    expect(Math.abs((bb.min.y + bb.max.y) / 2 - OUTLET.y)).toBeLessThan(1e-6);
-  });
-
-  it('keeps the socket and brick small', () => {
-    expect(WALL_PARTS.reduce((sum, p) => sum + triangleCount(partGeometry(p)), 0)).toBeLessThan(400);
+    expect(Math.max(...samples) - Math.min(...samples)).toBeGreaterThan((LED.max - LED.min) / 2);
+    const steady = [0, 0.3, 1.7, 4.31, 99].map((t) => ledIntensity(t, true));
+    expect(new Set(steady).size).toBe(1);
+    expect(steady[0]).toBeGreaterThanOrEqual(LED.min);
+    expect(steady[0]).toBeLessThanOrEqual(LED.max);
+    // Calm: no big jumps between frames at 60 fps, outside the brief blink.
+    const frames = Array.from({ length: 240 }, (_, i) => ledIntensity(0.5 + i / 60, false));
+    const jumps = frames.slice(1).filter((v, i) => Math.abs(v - frames[i]!) > (LED.max - LED.min) * 0.2).length;
+    expect(jumps).toBeLessThanOrEqual(4);
   });
 
   it('stays within a modest triangle budget (< 3k)', () => {
-    const total = PI_PARTS.reduce((sum, p) => sum + triangleCount(partGeometry(p)), 0) + triangleCount(powerCableGeometry());
+    const total = PI_PARTS.reduce((sum, p) => sum + triangleCount(partGeometry(p)), 0) + triangleCount(partGeometry(PI_LED));
     expect(total).toBeLessThan(3000);
   });
 });

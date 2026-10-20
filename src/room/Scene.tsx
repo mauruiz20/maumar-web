@@ -10,7 +10,7 @@ import type { ModelId } from './models';
 import type { MarkerId } from './nav';
 import { Highlight } from './highlight';
 import { Outside } from './Outside';
-import { PiPower, RaspberryPi } from './RaspberryPi';
+import { RaspberryPi } from './RaspberryPi';
 import { ExperienceBody } from './panels';
 import { PALETTE as C, paletteFor } from './palette';
 
@@ -439,9 +439,11 @@ export interface SceneProps {
   deskLabel: string;
   /** After the models have loaded and the first full frame has rendered. */
   onReady: () => void;
+  /** prefers-reduced-motion: animated details (the Pi's LED) hold still. */
+  reducedMotion: boolean;
 }
 
-export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSelect, onBook, onLamp, markerLayer, markers, onMarker, deskLabel, onReady }: SceneProps) {
+export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSelect, onBook, onLamp, markerLayer, markers, onMarker, deskLabel, onReady, reducedMotion }: SceneProps) {
   const gl = useThree((s) => s.gl);
   useEffect(() => {
     gl.domElement.style.cursor = hovered ? 'pointer' : '';
@@ -461,7 +463,7 @@ export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSel
         <Chair />
       </Clickable>
       <Clickable {...common} {...click('pi')}>
-        <RaspberryPi />
+        <RaspberryPi reducedMotion={reducedMotion} />
       </Clickable>
       <Clickable {...common} {...click('phone')}>
         <Phone />
@@ -482,7 +484,6 @@ export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSel
         <Lamp on={lampOn} />
       </Clickable>
       <Decor />
-      <PiPower />
       <Outside />
       <ReadySignal onReady={onReady} />
       {markers.length > 0 && <Markers markers={markers} onMarker={onMarker} deskLabel={deskLabel} layer={markerLayer} />}

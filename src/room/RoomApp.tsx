@@ -149,6 +149,7 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
               onLamp={() => setLampOn((on) => !on)}
               markerLayer={markerLayer}
               onReady={onReady}
+              reducedMotion={reducedMotion}
             />
           </Suspense>
           <CameraRig

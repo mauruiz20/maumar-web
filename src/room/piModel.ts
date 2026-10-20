@@ -1,14 +1,11 @@
 import {
   BoxGeometry,
-  CatmullRomCurve3,
   CylinderGeometry,
   ExtrudeGeometry,
   Shape,
-  TubeGeometry,
-  Vector3,
   type BufferGeometry,
 } from 'three';
-import { DESK, DESK_TOP, onDesk, type Vec3 } from './hotspots';
+import { DESK_TOP, onDesk, type Vec3 } from './hotspots';
 import type { PaletteKey } from './palette';
 
 /**
@@ -28,8 +25,6 @@ export const PI = {
   base: 0.011,
   shellRadius: 0.006,
   shellBevel: 0.0015,
-  /** A USB-C cable is about 4 mm thick. */
-  powerCableRadius: 0.002,
 } as const;
 
 type Part =
@@ -39,8 +34,8 @@ type Part =
 
 export type PiPart = Part & {
   name: string;
-  /** 'case' is the box itself (shell, base, feet); 'wall' the socket and power brick. */
-  group: 'case' | 'detail' | 'wall';
+  /** 'case' is the box itself (shell, base, feet); 'detail' everything on it. */
+  group: 'case' | 'detail';
   /** Centre, in the local frame. */
   position: Vec3;
   color: PaletteKey;
@@ -106,8 +101,8 @@ function usb(name: string, x: number, tongue: PaletteKey): PiPart[] {
 }
 
 const RJ45_X = -0.023;
-/** The USB-C plug on the left side, near the far end. */
-const USBC = { y: SHELL_BOTTOM + 0.006, z: -0.026, size: [0.011, 0.0065, 0.0125] as Vec3 };
+/** The USB-C power port on the left side, near the far end. */
+const USBC = { y: SHELL_BOTTOM + 0.006, z: -0.026 };
 
 export const PI_PARTS: readonly PiPart[] = [
   // The case: feet, the darker NVMe base (inset, so the seam shows), the aluminium shell.
@@ -148,8 +143,8 @@ export const PI_PARTS: readonly PiPart[] = [
   ...usb('usb2', 0.0155, 'paper'),
   // Long vent slot on the right side, just above the seam.
   box('vent', 'detail', [0.0004, 0.0022, 0.06], [W / 2 + 0.0002, SHELL_BOTTOM + 0.003, -0.004], 'ink'),
-  // USB-C power plug on the left side, near the far end (its cable: powerCablePath).
-  box('usbc-plug', 'detail', USBC.size, [-W / 2 - USBC.size[0] / 2, USBC.y, USBC.z], 'ink'),
+  // USB-C power port on the left side, near the far end: empty, like the RJ45 (no cables).
+  box('usbc-hole', 'detail', [0.0004, 0.0032, 0.009], [-W / 2 - 0.0002, USBC.y, USBC.z], 'ink'),
 ];
 
 /** On the desk at its DESK_ITEMS spot, turned so the ports face the Pi close-up camera. */
@@ -162,80 +157,34 @@ export function piToWorld([x, y, z]: Vec3): Vec3 {
   return [px + x * c + z * s, py + y, pz - x * s + z * c];
 }
 
-/** The back wall's plane (the room's inside face). */
-export const WALL_Z = -3;
-/** The wall socket's centre on the back wall: low, behind the desk, right of its middle. */
-export const OUTLET = { x: 0.5, y: 0.3 } as const;
-const SOCKET = { size: [0.07, 0.07, 0.008] as Vec3 };
-/** The official 27 W USB-C power supply: a small rounded black brick, cable out of its bottom. */
-export const BRICK = { size: [0.05, 0.062, 0.032] as Vec3 };
+/**
+ * The green status LED: a 2.5 mm dot on the port-end face, right of the USB 2 ports. Its own
+ * mesh and material (RaspberryPi.tsx), so its glow can pulse without touching the case.
+ */
+export const PI_LED: PiPart = {
+  kind: 'cyl',
+  name: 'led',
+  group: 'detail',
+  radius: 0.00125,
+  height: 0.0008,
+  segments: 10,
+  rotation: [Math.PI / 2, 0, 0],
+  position: [0.029, PORT_Y + 0.004, FRONT + 0.0004],
+  color: 'ledGreen',
+};
 
-/** Socket plate and power brick, in world coordinates (not part of the clickable Pi). */
-export const WALL_PARTS: readonly PiPart[] = [
-  {
-    kind: 'rounded',
-    name: 'socket',
-    group: 'wall',
-    size: SOCKET.size,
-    radius: 0.006,
-    bevel: 0.0015,
-    position: [OUTLET.x, OUTLET.y, WALL_Z + SOCKET.size[2] / 2],
-    color: 'rule',
-  },
-  {
-    kind: 'rounded',
-    name: 'brick',
-    group: 'wall',
-    size: BRICK.size,
-    radius: 0.008,
-    bevel: 0.003,
-    position: [OUTLET.x, OUTLET.y, WALL_Z + SOCKET.size[2] + BRICK.size[2] / 2],
-    color: 'ink',
-  },
-];
-
-/** Where the power cable leaves the USB-C plug, in world coordinates. */
-export function usbcPlugEnd(): Vec3 {
-  return piToWorld([-W / 2 - USBC.size[0], USBC.y, USBC.z]);
-}
+/** Emissive intensity range of the LED. */
+export const LED = { min: 0.35, max: 2.2, period: 1.6, blinkEvery: 4.3, blinkFor: 0.12 } as const;
 
 /**
- * The black USB-C power cable, in world coordinates: out of the plug, down onto the desk,
- * back along it past the monitor's right, off the back edge, down behind the desk and into
- * the bottom of the power brick on the wall socket.
+ * LED glow at time t (seconds): a slow, smooth breathe (LED.period), with a brief, calm
+ * activity blink now and then. Steady (bright, no change) under prefers-reduced-motion.
  */
-export function powerCablePath(): Vec3[] {
-  const r = PI.powerCableRadius;
-  const onDeskAt = (x: number, z: number): Vec3 => {
-    const [wx, , wz] = piToWorld([x, 0, z]);
-    return [wx, DESK_TOP + r, wz];
-  };
-  const back = DESK.center[1] - DESK.size[1] / 2;
-  const brickBottom = OUTLET.y - BRICK.size[1] / 2;
-  const brickZ = WALL_Z + SOCKET.size[2] + BRICK.size[2] / 2;
-  const drop = OUTLET.x + 0.045;
-  return [
-    usbcPlugEnd(),
-    piToWorld([-W / 2 - USBC.size[0] - 0.01, USBC.y - 0.008, USBC.z - 0.004]),
-    onDeskAt(-W / 2 - 0.03, -0.045),
-    onDeskAt(-W / 2 - 0.035, -0.09),
-    [OUTLET.x + 0.03, DESK_TOP + r, -2.75],
-    [drop, DESK_TOP + r, back + 0.012],
-    [drop, DESK_TOP - 0.012, back - 0.014],
-    [drop, DESK_TOP - 0.15, brickZ + 0.03],
-    [drop, brickBottom + 0.06, brickZ + 0.025],
-    [drop - 0.012, brickBottom - 0.03, brickZ + 0.01],
-    [OUTLET.x + 0.012, brickBottom - 0.028, brickZ],
-    [OUTLET.x, brickBottom, brickZ],
-  ];
-}
-
-export function powerCableCurve(): CatmullRomCurve3 {
-  return new CatmullRomCurve3(powerCablePath().map((p) => new Vector3(...p)), false, 'centripetal');
-}
-
-export function powerCableGeometry(): TubeGeometry {
-  return new TubeGeometry(powerCableCurve(), 64, PI.powerCableRadius, 5, false);
+export function ledIntensity(t: number, reducedMotion: boolean): number {
+  if (reducedMotion) return LED.min + (LED.max - LED.min) * 0.75;
+  const breathe = 0.5 - 0.5 * Math.cos((2 * Math.PI * t) / LED.period);
+  const blink = t % LED.blinkEvery < LED.blinkFor ? 1 : 0;
+  return LED.min + (LED.max - LED.min) * Math.max(breathe * 0.8, blink);
 }
 
 /** A box with rounded vertical edges and a small bevel on the top and bottom edges. */

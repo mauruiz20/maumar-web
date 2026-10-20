@@ -134,7 +134,7 @@ portrait camera. Desktop dpr is [1, 2]; no post-processing, no shadows yet.
 | `src/room/CameraRig.tsx` | Orbit limits, GSAP camera moves, panel-aware framing |
 | `src/room/hotspots.ts` | Hotspots as data: objects, camera views, content, markers, books |
 | `src/room/models.ts`, `layout.ts`, `assets.ts`, `progress.ts` | Model manifest; fitted placements and model geometry; useGLTF loading and progress for the loading screen |
-| `src/room/piModel.ts`, `RaspberryPi.tsx` | The Pi as procedural parts (sizes, ports, its USB-C power cable to a brick in a wall socket under the desk; tested in Node) and its components |
+| `src/room/piModel.ts`, `RaspberryPi.tsx` | The Pi as procedural parts (sizes, empty ports, a breathing green status LED; no cables in the room, for consistency; tested in Node) and its component |
 | `src/room/nav.ts`, `menu.ts` | Back stack, desk group and which touch markers show; object menu layout |
 | `src/room/city.ts`, `Outside.tsx` | Seeded city and mountain generators (pure, tested); the view through the window, drawn only inside a stencil mask of the opening |
 | `src/room/panels.tsx` | Renders hotspot content from the en/es content objects |

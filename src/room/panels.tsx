@@ -44,12 +44,13 @@ export function ExperienceBody({ content }: { content: Content }) {
   );
 }
 
-function ProjectBody({ content, id }: { content: Content; id: ProjectId }) {
+/** `named`: false when the panel's own title already is the project's name. */
+function ProjectBody({ content, id, named = true }: { content: Content; id: ProjectId; named?: boolean }) {
   const project = content.projects.items.find((p) => p.id === id);
   if (!project) return null;
   return (
     <article className="room-entry">
-      <h3>{project.name}</h3>
+      {named && <h3>{project.name}</h3>}
       <p>{project.summary}</p>
       <ul className="room-list">
         {project.details.map((d) => (
@@ -113,7 +114,8 @@ export function PanelBody({ content, what, book, onBook }: BodyProps) {
     case 'view':
       return null;
     case 'project':
-      return <ProjectBody content={content} id={what.project} />;
+      // The panel title is this project's name (panelTitle): don't repeat it.
+      return <ProjectBody content={content} id={what.project} named={false} />;
     case 'contact':
       return (
         <>
