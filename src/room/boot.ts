@@ -1,4 +1,5 @@
 import { BOOT_CLAIM_KEY, LOAD_TIMEOUT_MS, MODE_KEY, type SavedMode } from '../lib/mode';
+import { startVisibleTimer } from '../lib/visibleTimer';
 import { MODEL_IDS, modelUrl } from './models';
 
 /**
@@ -63,7 +64,8 @@ export function initRoomGate(): void {
   let starting = false;
   // Bumped on every stop(), so a start() still loading knows it was cancelled.
   let session = 0;
-  let loadTimer: ReturnType<typeof setTimeout> | undefined;
+  // Counts only visible time: hidden tabs never paint, so the room cannot get ready there.
+  let cancelLoadTimer: (() => void) | undefined;
 
   const setPageInert = (on: boolean) => {
     for (const el of Array.from(document.body.children)) {
@@ -91,7 +93,7 @@ export function initRoomGate(): void {
   const stop = () => {
     session += 1;
     starting = false;
-    clearTimeout(loadTimer);
+    cancelLoadTimer?.();
     const done = unmount;
     unmount = null;
     done?.();
@@ -119,7 +121,7 @@ export function initRoomGate(): void {
     preloadModels();
     setPageInert(true);
     root.focus({ preventScroll: true });
-    loadTimer = setTimeout(() => {
+    cancelLoadTimer = startVisibleTimer(() => {
       fail(new Error(`room not ready after ${LOAD_TIMEOUT_MS} ms`));
     }, LOAD_TIMEOUT_MS);
     try {
@@ -131,7 +133,7 @@ export function initRoomGate(): void {
         coarse: !matchMedia('(pointer: fine)').matches,
         reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
         onReady: () => {
-          clearTimeout(loadTimer);
+          cancelLoadTimer?.();
           html.dataset.room = 'open';
           root.dataset.state = 'ready';
         },

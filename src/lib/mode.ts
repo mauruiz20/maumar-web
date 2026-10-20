@@ -9,7 +9,10 @@ export const MIN_DEVICE_MEMORY_GB = 4;
 export const BOOT_CLAIM_KEY = 'roomBoot';
 /** If boot.ts has not claimed the loading screen by then, the inline gate uncovers the page. */
 export const BOOT_TIMEOUT_MS = 6000;
-/** If the room is not ready by then, boot.ts gives up and shows the simple page. */
+/**
+ * If the room is not ready after this much *visible* time, boot.ts gives up and shows the
+ * simple page. Time in a background tab does not count (see startVisibleTimer).
+ */
 export const LOAD_TIMEOUT_MS = 20000;
 
 export interface GateEnv {
