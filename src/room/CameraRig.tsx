@@ -1,9 +1,8 @@
-import { OrbitControls } from '@react-three/drei';
-import { useThree } from '@react-three/fiber';
-import { gsap } from 'gsap';
-import { useEffect, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import { useEffect, useMemo, useRef } from 'react';
 import { Vector3, type PerspectiveCamera } from 'three';
-import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { createTweens, tween } from './tween';
 import { FOV, OVERVIEW, OVERVIEW_PORTRAIT, panelShift, viewFor, type CameraView, type Hotspot, type PanelKind } from './hotspots';
 
 /** Anything the camera can frame besides the overview: a hotspot or the desk group view. */
@@ -31,12 +30,47 @@ interface Props {
 }
 
 /**
+ * three's own OrbitControls, wired the way drei's <OrbitControls makeDefault> did (so drei and
+ * three-stdlib stay out of the chunk): damping on, connected to R3F's event source, updated
+ * every frame before rendering, registered as the default controls.
+ */
+function useOrbitControls(): OrbitControls {
+  const camera = useThree((s) => s.camera);
+  const gl = useThree((s) => s.gl);
+  const connected = useThree((s) => s.events.connected) as HTMLElement | undefined;
+  const set = useThree((s) => s.set);
+  const get = useThree((s) => s.get);
+  const controls = useMemo(() => {
+    const c = new OrbitControls(camera);
+    c.enableDamping = true;
+    return c;
+  }, [camera]);
+  useEffect(() => {
+    controls.connect(connected ?? gl.domElement);
+    return () => controls.dispose();
+  }, [controls, connected, gl]);
+  useEffect(() => {
+    const old = get().controls;
+    set({ controls });
+    return () => set({ controls: old });
+  }, [controls, get, set]);
+  useFrame(() => {
+    if (controls.enabled) controls.update();
+  }, -1);
+  return controls;
+}
+
+/**
  * Overview: OrbitControls with a tight orbit around the desk, no pan, clamped zoom.
- * Hotspot views: controls off, GSAP tweens the camera and its look-at target (~1 s),
+ * Hotspot views: controls off, the camera and its look-at target tween (~1 s, power2.inOut,
+ * stepped by the frame loop),
  * or cuts instantly under prefers-reduced-motion.
  */
 export function CameraRig({ framing, reducedMotion, panel }: Props) {
-  const controls = useRef<OrbitControlsImpl>(null);
+  const c = useOrbitControls();
+  const tweens = useMemo(createTweens, []);
+  // After the controls (priority -1), before the frame renders.
+  useFrame((_, dt) => tweens.step(dt));
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
   const size = useThree((s) => s.size);
   const portrait = size.width < size.height;
@@ -65,15 +99,11 @@ export function CameraRig({ framing, reducedMotion, panel }: Props) {
       apply();
       return;
     }
-    const tween = gsap.to(shift.current, { ...to, duration: 1, ease: 'power2.inOut', onUpdate: apply, onComplete: apply });
-    return () => {
-      tween.kill();
-    };
-  }, [panel, portrait, size, camera, reducedMotion]);
+    const move = tweens.add(tween(shift.current, to, { duration: 1, onUpdate: apply }));
+    return () => move.cancel();
+  }, [panel, portrait, size, camera, reducedMotion, tweens]);
 
   useEffect(() => {
-    const c = controls.current;
-    if (!c) return;
     const dest = view ?? overview;
     const look = c.target;
     c.enabled = false;
@@ -97,28 +127,20 @@ export function CameraRig({ framing, reducedMotion, panel }: Props) {
 
     const [x, y, z] = dest.position;
     const [tx, ty, tz] = dest.target;
-    const ease = 'power2.inOut';
-    const move = gsap.to(camera.position, { x, y, z, duration: 1, ease });
-    const aim = gsap.to(look, {
-      x: tx,
-      y: ty,
-      z: tz,
-      duration: 1,
-      ease,
-      onUpdate: () => camera.lookAt(look),
-      onComplete: finish,
-    });
+    const move = tweens.add(tween(camera.position, { x, y, z }, { duration: 1 }));
+    const aim = tweens.add(
+      tween(look, { x: tx, y: ty, z: tz }, { duration: 1, onUpdate: () => camera.lookAt(look), onComplete: finish }),
+    );
     return () => {
-      move.kill();
-      aim.kill();
+      move.cancel();
+      aim.cancel();
     };
-  }, [view, overview, reducedMotion, camera]);
+  }, [view, overview, reducedMotion, camera, c, tweens]);
 
   const spread = 0.38;
   return (
-    <OrbitControls
-      ref={controls}
-      makeDefault
+    <primitive
+      object={c}
       target={overview.target as [number, number, number]}
       enablePan={false}
       minAzimuthAngle={azimuth - spread}

@@ -6,7 +6,7 @@ import { MODEL_IDS, modelUrl } from './models';
  * Runtime half of the gate (the decision itself runs inline in <head>, see GATE_SCRIPT).
  * Shows the "View the 3D room" button when WebGL works, opens the room when the gate said
  * so or the visitor asked, and closes it back to the simple page. The room bundle
- * (React, three, R3F, drei, GSAP) is only fetched by start().
+ * (React, three, R3F, drei's <Html>) is only fetched by start().
  */
 
 const html = document.documentElement;

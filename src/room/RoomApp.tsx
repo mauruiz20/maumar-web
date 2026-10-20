@@ -1,7 +1,7 @@
-import { Canvas } from '@react-three/fiber';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import type { Content } from '../content/profile';
 import { CameraRig } from './CameraRig';
+import { RoomCanvas } from './RoomCanvas';
 import { FOV, HOTSPOTS, OVERVIEW, OVERVIEW_PORTRAIT, hasPanel, hotspotById, type HotspotId, type ProjectId } from './hotspots';
 import { MENU_COMPACT_WIDTH, menuLayout } from './menu';
 import { DESK_VIEW, markerPosition, navigate, placeOf, visibleMarkers, type MarkerId, type NavAction, type NavStack } from './nav';
@@ -118,7 +118,7 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
   return (
     <div className={`room-app${coarse ? ' is-coarse' : ''}`}>
       <div className="room-stage">
-        <Canvas
+        <RoomCanvas
           dpr={coarse ? [1, 1.5] : [1, 2]}
           // The view out of the window is drawn through a stencil mask (Outside.tsx).
           gl={{ stencil: true }}
@@ -157,7 +157,7 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
             reducedMotion={reducedMotion}
             panel={showPanel ? (coarse ? 'sheet' : 'side') : null}
           />
-        </Canvas>
+        </RoomCanvas>
         {/* Touch markers live here (a stable drei <Html> portal target). */}
         <div className="room-markers" ref={markerLayer} />
       </div>

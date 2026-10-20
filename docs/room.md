@@ -90,11 +90,11 @@ simple can still open the room with the "View the 3D room" button.
 2. `src/room/boot.ts` (an Astro-processed `<script>`, ~1.5 KB gzip) shows the "View the 3D
    room" button when WebGL works, and starts the room when the gate said so or the button
    was pressed (that also saves `"room"`).
-3. Only `start()` runs `import('./mount')`: Vite splits React, three, R3F, drei and GSAP into
+3. Only `start()` runs `import('./mount')`: Vite splits React, three, R3F and drei's `<Html>` into
    one lazy chunk. No HTML references it and there is no modulepreload for it. Its CSS is
    imported with `?inline` and injected on mount, so Astro does not link it from every page.
    `start()` also injects `<link rel="preload" as="fetch" crossorigin>` for the 10 GLBs, so they
-   download alongside the chunk; drei's `useGLTF` then gets them from the preload (one request
+   download alongside the chunk; R3F's `useLoader` with three's own GLTFLoader (and its inlined meshopt decoder) then gets them from the preload (one request
    each). The loading bar turns determinate on the first progress event (items loaded / total,
    from three's loading manager) and `onReady` fires after the models load and the first full
    frame renders.
@@ -111,8 +111,8 @@ always visible (also during loading): it saves `"simple"`, unmounts the React ro
 disposes the renderer and loses the context), removes the room styles, restores the page
 and returns focus to the "View the 3D room" button.
 
-**Inside the room**: OrbitControls with a tight orbit (no pan, clamped zoom) for the
-overview; a hotspot click tweens camera and target with GSAP (1 s, `power2.inOut`; instant
+**Inside the room**: three's own OrbitControls with a tight orbit (no pan, clamped zoom) for the
+overview; a hotspot click tweens camera and target with `tween.ts` (1 s, GSAP's `power2.inOut` curve, stepped by R3F's frame loop; instant
 under `prefers-reduced-motion`); Escape or "Back" returns. The HTML object menu lists every
 hotspot plus the lamp toggle; it collapses to an "Objects" button (`menuLayout`) on touch or
 narrow (< 768 px) screens and inside any view, and Escape closes the open list before the view. The monitor shows the CV as real HTML (drei `<Html transform
@@ -131,9 +131,10 @@ portrait camera. Desktop dpr is [1, 2]; no post-processing, no shadows yet.
 | `src/room/mount.tsx` | `createRoot` into the overlay; returns unmount |
 | `src/room/RoomApp.tsx` | Canvas, object menu, Back, panel / bottom sheet |
 | `src/room/Scene.tsx` | Blockout primitives, hover highlight, markers, monitor `<Html>` |
-| `src/room/CameraRig.tsx` | Orbit limits, GSAP camera moves, panel-aware framing |
+| `src/room/CameraRig.tsx`, `tween.ts` | Orbit limits, camera moves (own tween helper), panel-aware framing |
+| `src/room/RoomCanvas.tsx`, `catalogue.ts` | R3F's `createRoot` instead of `<Canvas>`, registering only the three classes the JSX uses (`extend(CATALOGUE)`), so three tree-shakes; a test fails if the JSX uses an unregistered element |
 | `src/room/hotspots.ts` | Hotspots as data: objects, camera views, content, markers, books |
-| `src/room/models.ts`, `layout.ts`, `assets.ts`, `progress.ts` | Model manifest; fitted placements and model geometry; useGLTF loading and progress for the loading screen |
+| `src/room/models.ts`, `layout.ts`, `assets.ts`, `progress.ts` | Model manifest; fitted placements and model geometry; model loading (useLoader + GLTFLoader) and progress for the loading screen |
 | `src/room/piModel.ts`, `RaspberryPi.tsx` | The Pi as procedural parts (sizes, empty ports, a breathing green status LED; no cables in the room, for consistency; tested in Node) and its component |
 | `src/room/nav.ts`, `menu.ts` | Back stack, desk group and which touch markers show; object menu layout |
 | `src/room/city.ts`, `Outside.tsx` | Seeded city and mountain generators (pure, tested); the view through the window, drawn only inside a stencil mask of the opening |
