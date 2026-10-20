@@ -1,4 +1,5 @@
 import { BOOT_CLAIM_KEY, LOAD_TIMEOUT_MS, MODE_KEY, type SavedMode } from '../lib/mode';
+import { MODEL_IDS, modelUrl } from './models';
 
 /**
  * Runtime half of the gate (the decision itself runs inline in <head>, see GATE_SCRIPT).
@@ -28,10 +29,31 @@ function hasWebGL(): boolean {
   }
 }
 
+/**
+ * Starts downloading the models while the room's JS chunk loads. Injected only when the room
+ * starts (never in the static HTML), so simple-mode visitors never fetch them. `as=fetch`
+ * with `crossorigin` (anonymous: same-origin credentials) matches the request GLTFLoader
+ * makes later, so it is served from the preload instead of downloading again.
+ */
+function preloadModels(): void {
+  for (const id of MODEL_IDS) {
+    const href = modelUrl(id);
+    if (document.head.querySelector(`link[rel="preload"][href="${href}"]`)) continue;
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'fetch';
+    link.crossOrigin = 'anonymous';
+    link.href = href;
+    document.head.append(link);
+  }
+}
+
 export function initRoomGate(): void {
   const root = document.getElementById('room-root');
   const app = root?.querySelector<HTMLElement>('[data-room-app]');
   const exit = root?.querySelector<HTMLButtonElement>('[data-room-exit]');
+  const bar = root?.querySelector<HTMLElement>('[data-room-progress]');
+  const percent = root?.querySelector<HTMLElement>('[data-room-progress-text]');
   const enter = document.getElementById('room-enter') as HTMLButtonElement | null;
   if (!root || !app || !exit) return;
   // Tell the inline gate's fallback timer that the loading screen is in good hands.
@@ -47,6 +69,23 @@ export function initRoomGate(): void {
     for (const el of Array.from(document.body.children)) {
       if (el !== root) el.toggleAttribute('inert', on);
     }
+  };
+
+  /** null: indeterminate (nothing loaded yet); otherwise 0..1. */
+  const showProgress = (fraction: number | null) => {
+    if (!bar) return;
+    if (fraction === null) {
+      delete bar.dataset.determinate;
+      bar.removeAttribute('aria-valuenow');
+      bar.style.removeProperty('--room-progress');
+      if (percent) percent.textContent = '';
+      return;
+    }
+    const value = Math.round(fraction * 100);
+    bar.dataset.determinate = '';
+    bar.setAttribute('aria-valuenow', String(value));
+    bar.style.setProperty('--room-progress', `${value}%`);
+    if (percent) percent.textContent = `${value}%`;
   };
 
   const stop = () => {
@@ -76,6 +115,8 @@ export function initRoomGate(): void {
     const current = session;
     html.dataset.room = 'boot';
     root.hidden = false;
+    showProgress(null);
+    preloadModels();
     setPageInert(true);
     root.focus({ preventScroll: true });
     loadTimer = setTimeout(() => {
@@ -93,6 +134,9 @@ export function initRoomGate(): void {
           clearTimeout(loadTimer);
           html.dataset.room = 'open';
           root.dataset.state = 'ready';
+        },
+        onProgress: (fraction) => {
+          if (current === session) showProgress(fraction);
         },
         onFail: fail,
       });

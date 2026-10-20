@@ -239,6 +239,22 @@ html[data-room] .room-root[hidden] {
   animation: room-load 1.4s ease-in-out infinite;
 }
 
+/* Determinate once the first model reports progress (boot.ts sets --room-progress). */
+.room-loading-bar[data-determinate]::after {
+  width: var(--room-progress, 0%);
+  animation: none;
+  transform: none;
+  opacity: 1;
+  transition: width 0.25s ease-out;
+}
+
+.room-loading-percent {
+  min-height: 1.4em;
+  color: var(--muted);
+  font-size: var(--step--1);
+  font-variant-numeric: tabular-nums;
+}
+
 @keyframes room-load {
   from {
     transform: translateX(-100%);

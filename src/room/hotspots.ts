@@ -1,4 +1,5 @@
 import type { Project } from '../content/profile';
+import { CV_SCREEN, DESK, DESK_TOP, PROJECT_SHELF_Y } from './layout';
 
 /**
  * Room layout in metres. Floor at y = 0; the back wall is the plane z = -3 and the left wall
@@ -46,9 +47,8 @@ export interface Hotspot {
   marker: Vec3;
 }
 
-export const DESK_TOP = 0.75;
-/** Desktop footprint on the floor plane: centre [x, z] and size [width, depth]. */
-export const DESK = { center: [0, -2.5], size: [1.6, 0.8] } as const;
+// The desk's numbers live with the model layout (layout.ts) and are re-exported here.
+export { DESK, DESK_TOP };
 /** The back-wall window's opening: centre [x, y] and size [width, height], in the plane z = -3. */
 export const WINDOW = { center: [0.9, 1.55], size: [1.4, 1.2] } as const;
 
@@ -98,9 +98,10 @@ export const HOTSPOTS: readonly Hotspot[] = [
   {
     id: 'monitor',
     objects: ['monitor', 'chair'],
-    view: { position: [0, 1.13, -1.65], target: [0, 1.13, -2.6] },
+    // Seated, looking slightly down at the centre of the monitor model's screen.
+    view: { position: [0, 1.13, -1.65], target: CV_SCREEN.position },
     // Higher and further back, over the chair back, so screen and desk fit the narrow width.
-    portraitView: { position: [0, 1.32, -1.15], target: [0, 1.1, -2.62] },
+    portraitView: { position: [0, 1.32, -1.15], target: CV_SCREEN.position },
     content: { kind: 'experience' },
     marker: [0, 1.4, -2.62],
   },
@@ -176,11 +177,16 @@ export interface Book {
   color: string;
 }
 
+/** A project book standing on the bookcase's project shelf, at floor position z. */
+function book(project: ProjectId, z: number, size: Vec3, color: string): Book {
+  return { project, position: [-2.78, PROJECT_SHELF_Y + size[1] / 2, z], size, color };
+}
+
 /** One book per project shown by the bookshelf, standing on its middle shelf. */
 export const BOOKS: readonly Book[] = [
-  { project: 'turnero', position: [-2.78, 1.27, -0.86], size: [0.24, 0.3, 0.07], color: '#b4245f' },
-  { project: 'monogestor', position: [-2.78, 1.25, -0.76], size: [0.24, 0.26, 0.08], color: '#3f6b5c' },
-  { project: 'jobradar', position: [-2.78, 1.28, -0.66], size: [0.24, 0.32, 0.06], color: '#c9a227' },
+  book('turnero', -0.86, [0.24, 0.3, 0.07], '#b4245f'),
+  book('monogestor', -0.76, [0.24, 0.26, 0.08], '#3f6b5c'),
+  book('jobradar', -0.66, [0.24, 0.32, 0.06], '#c9a227'),
 ];
 
 export function hotspotById(id: HotspotId): Hotspot {

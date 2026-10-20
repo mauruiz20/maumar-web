@@ -24,3 +24,41 @@ export const PALETTE = {
   highlight: '#f28db7',
   lampLight: '#ffd9a8',
 } as const;
+
+export type PaletteKey = keyof typeof PALETTE;
+
+/** Default palette key per Kenney material name. */
+const MATERIALS: Record<string, PaletteKey> = {
+  wood: 'wood',
+  woodDark: 'wood',
+  metal: 'muted',
+  metalMedium: 'muted',
+  metalDark: 'ink',
+  carpet: 'rug',
+  carpetDarker: 'accent',
+  carpetWhite: 'paper',
+  plant: 'leaf',
+  lamp: 'paper',
+};
+
+/** Per-model exceptions (e.g. the monitor's light "metal" is its screen, which reads as off). */
+const OVERRIDES: Record<string, Record<string, PaletteKey>> = {
+  desk: { metal: 'ink' },
+  bookcaseOpen: { wood: 'woodLight' },
+  // Filler books stay quiet, so the three clickable project books stand out.
+  books: { carpetDarker: 'inkSoft', plant: 'muted', metal: 'rule' },
+  chairDesk: { carpet: 'inkSoft', metalMedium: 'ink' },
+  computerScreen: { metal: 'inkSoft', metalDark: 'ink' },
+  computerKeyboard: { metalMedium: 'muted' },
+  lampRoundTable: { lamp: 'accent', metal: 'muted' },
+  pottedPlant: { wood: 'accent', woodDark: 'wood' },
+  rugRectangle: { carpet: 'rug', carpetDarker: 'accentSoft' },
+};
+
+/** Palette key for a Kenney material, optionally per model; unknown names fall back to muted. */
+export function paletteFor(material: string, model?: string): PaletteKey {
+  // Own keys only: names like "constructor" must not reach Object.prototype.
+  const own = <T,>(map: Record<string, T> | undefined, key: string): T | undefined =>
+    map && Object.hasOwn(map, key) ? map[key] : undefined;
+  return (model ? own(own(OVERRIDES, model), material) : undefined) ?? own(MATERIALS, material) ?? 'muted';
+}

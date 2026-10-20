@@ -20,15 +20,15 @@ The simple mode (phase 1) is the same content as plain HTML and is always one cl
 
 | Object | On click | Content | Source |
 |---|---|---|---|
-| Chair + monitor | Camera sits you in front of the screen | CV as real HTML (drei `<Html>`) | Kenney |
-| Bookshelf | Camera moves to the shelf | One book per project: Turnero, MonoGestor, jobradar | Kenney |
+| Chair + monitor | Camera sits you in front of the screen | CV as real HTML (drei `<Html>`) | Kenney: `chairDesk`, `computerScreen`, `computerKeyboard`, `computerMouse` (desk: `desk`) |
+| Bookshelf | Camera moves to the shelf | One book per project: Turnero, MonoGestor, jobradar | Kenney `bookcaseOpen` + `books` as filler; the 3 project books are boxes |
 | Whiteboard | Front view | Skills grouped by area | Box + texture |
-| Raspberry Pi | Zoom on the desk | Home server: hardware, Cloudflare Tunnel, what runs on it | Modelled by Mauricio |
-| Phone | Lifts towards the camera | Contact + CV download | Kenney or Quaternius |
-| Mug | Short zoom on the desk | Education: Computer Engineering, UNT, 2019–2023 | Kenney or Quaternius + logo decal |
-| Lamp | Toggles on/off | Easter egg, or light/dark theme toggle | Kenney |
+| Raspberry Pi | Zoom on the desk | Home server: hardware, Cloudflare Tunnel, what runs on it | Boxes for now; to be modelled by Mauricio |
+| Phone | Lifts towards the camera | Contact + CV download | Boxes |
+| Mug | Short zoom on the desk | Education: Computer Engineering, UNT, 2019–2023 | Cylinders (+ logo decal later) |
+| Lamp | Toggles on/off | Easter egg, or light/dark theme toggle | Kenney `lampRoundTable` |
 | Window | Camera moves to the window | No panel: the city and mountains outside | Generated in code |
-| Plant, rug, frame | — | Visual filler, not clickable | Kenney |
+| Plant, rug, frame | — | Visual filler, not clickable | Kenney `pottedPlant`, `rugRectangle`; frame is boxes |
 
 The mug carries a decal (transparent PNG) of the real "Ingeniería en Computación" mug logo.
 The window view is daytime only; a night variant (lit windows, dark sky) is a future idea.
@@ -38,7 +38,10 @@ The window view is daytime only; a night variant (lit windows, dark sky) is a fu
 - Kenney and Quaternius: CC0.
 - Poly Pizza: license per model; many are CC-BY and require attribution. Record every
   CC-BY asset in a credits section.
-- Confirm the exact contents of the Kenney Furniture Kit before committing to it.
+
+**Credits**: furniture models from the Furniture Kit 2.0 by Kenney (kenney.nl), CC0. The 10
+GLBs used are in `public/models/kenney/` with the kit's `License.txt`; they are recoloured to
+the site palette at load time (`paletteFor` in `palette.ts`) and placed by `layout.ts`.
 
 ## Mobile
 
@@ -87,6 +90,11 @@ simple can still open the room with the "View the 3D room" button.
 3. Only `start()` runs `import('./mount')`: Vite splits React, three, R3F, drei and GSAP into
    one lazy chunk. No HTML references it and there is no modulepreload for it. Its CSS is
    imported with `?inline` and injected on mount, so Astro does not link it from every page.
+   `start()` also injects `<link rel="preload" as="fetch" crossorigin>` for the 10 GLBs, so they
+   download alongside the chunk; drei's `useGLTF` then gets them from the preload (one request
+   each). The loading bar turns determinate on the first progress event (items loaded / total,
+   from three's loading manager) and `onReady` fires after the models load and the first full
+   frame renders.
 4. The import or WebGL failing (including errors inside the React tree, through
    `createRoot`'s `onUncaughtError`) logs to the console and silently restores the page.
 
@@ -122,6 +130,7 @@ portrait camera. Desktop dpr is [1, 2]; no post-processing, no shadows yet.
 | `src/room/Scene.tsx` | Blockout primitives, hover highlight, markers, monitor `<Html>` |
 | `src/room/CameraRig.tsx` | Orbit limits, GSAP camera moves, panel-aware framing |
 | `src/room/hotspots.ts` | Hotspots as data: objects, camera views, content, markers, books |
+| `src/room/models.ts`, `layout.ts`, `assets.ts`, `progress.ts` | Model manifest; fitted placements and model geometry; useGLTF loading and progress for the loading screen |
 | `src/room/nav.ts`, `menu.ts` | Back stack, desk group and which touch markers show; object menu layout |
 | `src/room/city.ts`, `Outside.tsx` | Seeded city and mountain generators (pure, tested); the view through the window, drawn only inside a stencil mask of the opening |
 | `src/room/panels.tsx` | Renders hotspot content from the en/es content objects |

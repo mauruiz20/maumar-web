@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import type { Content } from '../content/profile';
 import { CameraRig } from './CameraRig';
 import { FOV, HOTSPOTS, OVERVIEW, OVERVIEW_PORTRAIT, hasPanel, hotspotById, type HotspotId, type ProjectId } from './hotspots';
@@ -129,25 +129,28 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
             far: 180,
             position: [...overview.position],
           }}
-          onCreated={() => onReady()}
           onPointerMissed={() => setHovered(null)}
         >
           <color attach="background" args={['#ece9e1']} />
-          <Scene
-            content={content}
-            coarse={coarse}
-            active={active}
-            hovered={hovered}
-            lampOn={lampOn}
-            onHover={setHovered}
-            onSelect={selectInScene}
-            onBook={selectBook}
-            markers={markers}
-            onMarker={onMarker}
-            deskLabel={room.desk}
-            onLamp={() => setLampOn((on) => !on)}
-            markerLayer={markerLayer}
-          />
+          {/* Suspends until every model has loaded; the loading screen covers it meanwhile. */}
+          <Suspense fallback={null}>
+            <Scene
+              content={content}
+              coarse={coarse}
+              active={active}
+              hovered={hovered}
+              lampOn={lampOn}
+              onHover={setHovered}
+              onSelect={selectInScene}
+              onBook={selectBook}
+              markers={markers}
+              onMarker={onMarker}
+              deskLabel={room.desk}
+              onLamp={() => setLampOn((on) => !on)}
+              markerLayer={markerLayer}
+              onReady={onReady}
+            />
+          </Suspense>
           <CameraRig
             framing={place === 'desk' ? DESK_VIEW : hotspot}
             reducedMotion={reducedMotion}

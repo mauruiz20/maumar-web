@@ -12,7 +12,14 @@ const { room } = Astro.props.content;
   <div class="room-host" data-room-app></div>
   <div class="room-loading">
     <p class="room-loading-text">{room.loading}</p>
-    <span class="room-loading-bar" aria-hidden="true"></span>
+    <span
+      class="room-loading-bar"
+      role="progressbar"
+      aria-label={room.loading}
+      aria-valuemin="0"
+      aria-valuemax="100"
+      data-room-progress></span>
+    <span class="room-loading-percent" aria-hidden="true" data-room-progress-text></span>
   </div>
 </div>
 

@@ -1,12 +1,16 @@
 import { Html } from '@react-three/drei';
-import { useThree, type ThreeEvent } from '@react-three/fiber';
-import { createContext, useContext, useEffect, type ReactNode, type RefObject } from 'react';
+import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
+import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
+import { MeshStandardMaterial, type Mesh, type Object3D } from 'three';
+import { useModel } from './assets';
 import type { Content } from '../content/profile';
-import { BOOKS, DESK, DESK_TOP, WINDOW, onDesk, type HotspotId, type ProjectId, type Vec3 } from './hotspots';
+import { BOOKS, DESK_TOP, WINDOW, onDesk, type HotspotId, type ProjectId, type Vec3 } from './hotspots';
+import { BOOK_FILLERS, CV_SCREEN, LAMP_BULB, PLACEMENTS, type Placement } from './layout';
+import type { ModelId } from './models';
 import type { MarkerId } from './nav';
 import { Outside } from './Outside';
 import { ExperienceBody } from './panels';
-import { PALETTE as C } from './palette';
+import { PALETTE as C, paletteFor } from './palette';
 
 /** True while the pointer is over the object this part belongs to. */
 const Highlight = createContext(false);
@@ -50,6 +54,69 @@ function Cyl({ size, position, color, rotation, segments = 20 }: CylProps) {
       <meshStandardMaterial color={color} emissive={C.highlight} emissiveIntensity={lit ? 0.15 : 0} />
     </mesh>
   );
+}
+
+interface ModelProps {
+  id: ModelId;
+  placement: Placement;
+  /** A material (by Kenney name) that glows, e.g. the lamp shade when the lamp is on. */
+  glow?: { material: string; on: boolean };
+}
+
+const meshesOf = (root: Object3D): Mesh[] => {
+  const out: Mesh[] = [];
+  root.traverse((o) => {
+    if ((o as Mesh).isMesh) out.push(o as Mesh);
+  });
+  return out;
+};
+
+/**
+ * A Kenney model, recoloured to the site palette: each instance clones the cached scene and
+ * gets its own flat-shaded materials (named after the Kenney ones), so hover highlight and
+ * glow never leak between instances or into the cache.
+ */
+function Model({ id, placement, glow }: ModelProps) {
+  const { scene } = useModel(id);
+  const lit = useContext(Highlight);
+  const object = useMemo(() => {
+    const root = scene.clone(true);
+    for (const mesh of meshesOf(root)) {
+      const name = (mesh.material as { name?: string }).name ?? '';
+      const material = new MeshStandardMaterial({ color: C[paletteFor(name, id)], roughness: 1, metalness: 0, flatShading: true });
+      material.name = name;
+      mesh.material = material;
+    }
+    return root;
+  }, [scene, id]);
+  useEffect(() => () => meshesOf(object).forEach((m) => (m.material as MeshStandardMaterial).dispose()), [object]);
+  const glowing = glow?.on ? glow.material : null;
+  useEffect(() => {
+    for (const mesh of meshesOf(object)) {
+      const m = mesh.material as MeshStandardMaterial;
+      const glows = m.name === glowing;
+      m.emissive.set(lit ? C.highlight : glows ? C.lampLight : '#000000');
+      m.emissiveIntensity = lit ? 0.15 : glows ? 0.7 : 0;
+    }
+  }, [object, lit, glowing]);
+  return (
+    <primitive object={object} position={placement.position} rotation={[0, placement.rotationY, 0]} scale={placement.scale} />
+  );
+}
+
+/**
+ * Calls onReady once, after the first frame that has everything in it: the scene suspends
+ * until every model has loaded, so this only mounts then; useFrame runs before that frame's
+ * render, and the next animation frame comes after it.
+ */
+function ReadySignal({ onReady }: { onReady: () => void }) {
+  const done = useRef(false);
+  useFrame(() => {
+    if (done.current) return;
+    done.current = true;
+    requestAnimationFrame(() => onReady());
+  });
+  return null;
 }
 
 /** Invisible box that widens the tap target of small objects on touch screens. */
@@ -131,18 +198,9 @@ function Room() {
 }
 
 function Desk() {
-  const legs: Vec3[] = [
-    [0.75, 0.35, -2.15],
-    [-0.75, 0.35, -2.15],
-    [0.75, 0.35, -2.85],
-    [-0.75, 0.35, -2.85],
-  ];
   return (
     <group name="desk">
-      <Box size={[DESK.size[0], 0.05, DESK.size[1]]} position={[DESK.center[0], DESK_TOP - 0.025, DESK.center[1]]} color={C.wood} />
-      {legs.map((p) => (
-        <Box key={p.join()} size={[0.05, 0.7, 0.05]} position={p} color={C.ink} />
-      ))}
+      <Model id="desk" placement={PLACEMENTS.desk} />
     </group>
   );
 }
@@ -153,17 +211,16 @@ const focusOnMount = (el: HTMLElement | null) => el?.focus({ preventScroll: true
 function Monitor({ showCv, content }: { showCv: boolean; content: Content }) {
   return (
     <group name="monitor">
-      <Box size={[0.62, 0.38, 0.03]} position={[0, 1.13, -2.62]} color={C.ink} />
-      <Box size={[0.58, 0.34, 0.004]} position={[0, 1.13, -2.603]} color={C.inkSoft} />
-      <Box size={[0.05, 0.22, 0.04]} position={[0, 0.86, -2.65]} color={C.ink} />
-      <Box size={[0.22, 0.015, 0.16]} position={[0, DESK_TOP + 0.008, -2.64]} color={C.ink} />
-      <Box size={[0.45, 0.02, 0.15]} position={[0, DESK_TOP + 0.01, -2.3]} color={C.muted} />
+      <Model id="computerScreen" placement={PLACEMENTS.computerScreen} />
+      <Model id="computerKeyboard" placement={PLACEMENTS.computerKeyboard} />
+      <Model id="computerMouse" placement={PLACEMENTS.computerMouse} />
       {showCv && (
         <Html
           transform
           occlude
-          position={[0, 1.13, -2.598]}
-          distanceFactor={0.375}
+          position={CV_SCREEN.position}
+          rotation={CV_SCREEN.rotation}
+          distanceFactor={CV_SCREEN.distanceFactor}
           zIndexRange={[5, 0]}
           className="room-screen-host"
         >
@@ -185,10 +242,7 @@ function Monitor({ showCv, content }: { showCv: boolean; content: Content }) {
 function Chair() {
   return (
     <group name="chair">
-      <Box size={[0.48, 0.06, 0.46]} position={[0, 0.47, -1.65]} color={C.inkSoft} />
-      <Box size={[0.48, 0.5, 0.05]} position={[0, 0.8, -1.42]} color={C.inkSoft} />
-      <Cyl size={[0.03, 0.03, 0.4]} position={[0, 0.24, -1.65]} color={C.muted} />
-      <Cyl size={[0.25, 0.25, 0.04]} position={[0, 0.04, -1.65]} color={C.ink} />
+      <Model id="chairDesk" placement={PLACEMENTS.chairDesk} />
     </group>
   );
 }
@@ -224,27 +278,18 @@ function Mug() {
 function Lamp({ on }: { on: boolean }) {
   return (
     <group name="lamp">
-      <Cyl size={[0.07, 0.07, 0.02]} position={[-0.62, DESK_TOP + 0.01, -2.6]} color={C.muted} />
-      <Cyl size={[0.012, 0.012, 0.45]} position={[-0.62, DESK_TOP + 0.24, -2.6]} color={C.muted} />
-      <Cyl size={[0.03, 0.08, 0.1]} position={[-0.58, 1.2, -2.55]} rotation={[0.5, 0, -0.3]} color={C.accent} />
-      <mesh position={[-0.565, 1.155, -2.53]}>
-        <sphereGeometry args={[0.025, 12, 12]} />
-        <meshStandardMaterial color={C.paper} emissive={C.lampLight} emissiveIntensity={on ? 2 : 0} />
-      </mesh>
-      <pointLight position={[-0.55, 1.12, -2.5]} color={C.lampLight} intensity={on ? 1.6 : 0} distance={2.5} decay={2} />
+      <Model id="lampRoundTable" placement={PLACEMENTS.lampRoundTable} glow={{ material: 'lamp', on }} />
+      <pointLight position={LAMP_BULB} color={C.lampLight} intensity={on ? 1.6 : 0} distance={2.5} decay={2} />
     </group>
   );
 }
 
 function Bookshelf({ onBook }: { onBook: (id: ProjectId) => void }) {
-  const shelves = [0.05, 0.6, 1.1, 1.6, 1.885];
   return (
     <group name="bookshelf">
-      <Box size={[0.35, 1.9, 0.03]} position={[-2.825, 0.95, -1.085]} color={C.woodLight} />
-      <Box size={[0.35, 1.9, 0.03]} position={[-2.825, 0.95, -0.115]} color={C.woodLight} />
-      <Box size={[0.02, 1.9, 1.0]} position={[-2.99, 0.95, -0.6]} color={C.wood} />
-      {shelves.map((y) => (
-        <Box key={y} size={[0.35, 0.03, 0.97]} position={[-2.825, y, -0.6]} color={C.woodLight} />
+      <Model id="bookcaseOpen" placement={PLACEMENTS.bookcaseOpen} />
+      {BOOK_FILLERS.map((placement, i) => (
+        <Model key={i} id="books" placement={placement} />
       ))}
       {BOOKS.map((b) => (
         <group
@@ -327,14 +372,10 @@ function Decor() {
         <Box size={[0.01, 0.32, 0.42]} position={[-2.968, 1.65, 1.0]} color={C.accentSoft} />
       </group>
       <group name="plant">
-        <Cyl size={[0.16, 0.12, 0.36]} position={[1.3, 0.18, -2.6]} color={C.accent} />
-        <mesh position={[1.3, 0.62, -2.6]}>
-          <icosahedronGeometry args={[0.3, 0]} />
-          <meshStandardMaterial color={C.leaf} flatShading />
-        </mesh>
+        <Model id="pottedPlant" placement={PLACEMENTS.pottedPlant} />
       </group>
       <group name="rug">
-        <Box size={[2.4, 0.01, 1.7]} position={[0, 0.005, -1.4]} color={C.rug} />
+        <Model id="rugRectangle" placement={PLACEMENTS.rugRectangle} />
       </group>
     </>
   );
@@ -399,9 +440,11 @@ export interface SceneProps {
   markers: MarkersProps['markers'];
   onMarker: (id: MarkerId) => void;
   deskLabel: string;
+  /** After the models have loaded and the first full frame has rendered. */
+  onReady: () => void;
 }
 
-export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSelect, onBook, onLamp, markerLayer, markers, onMarker, deskLabel }: SceneProps) {
+export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSelect, onBook, onLamp, markerLayer, markers, onMarker, deskLabel, onReady }: SceneProps) {
   const gl = useThree((s) => s.gl);
   useEffect(() => {
     gl.domElement.style.cursor = hovered ? 'pointer' : '';
@@ -443,6 +486,7 @@ export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSel
       </Clickable>
       <Decor />
       <Outside />
+      <ReadySignal onReady={onReady} />
       {markers.length > 0 && <Markers markers={markers} onMarker={onMarker} deskLabel={deskLabel} layer={markerLayer} />}
     </>
   );
