@@ -10,7 +10,7 @@ import {
   type Building,
   type Ridge,
 } from '../src/room/city';
-import { OVERVIEW, WINDOW, type Vec3 } from '../src/room/hotspots';
+import { OVERVIEW, WINDOW, hotspotById, type Vec3 } from '../src/room/hotspots';
 
 const EYE = OVERVIEW.position;
 const DEG = Math.PI / 180;
@@ -31,27 +31,27 @@ interface Sight {
   el: number;
 }
 
-/** Sight lines from the overview camera through a grid of points on the window opening. */
-function sightLines(n = 9): Sight[] {
+/** Sight lines from a camera (the overview by default) through a grid of points on the window opening. */
+function sightLines(eye: Vec3 = EYE, n = 9): Sight[] {
   const [cx, cy] = WINDOW.center;
   const [w, h] = WINDOW.size;
   const out: Sight[] = [];
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
       const p: Vec3 = [cx - w / 2 + (w * i) / (n - 1), cy - h / 2 + (h * j) / (n - 1), -3];
-      out.push({ az: azimuth(EYE, p), el: elevation(EYE, p) });
+      out.push({ az: azimuth(eye, p), el: elevation(eye, p) });
     }
   }
   return out;
 }
 
 /** Highest elevation of the ridges at an azimuth, interpolated between silhouette points. */
-function ridgeElevation(ridges: Ridge[], az: number): number {
+function ridgeElevation(ridges: Ridge[], az: number, eye: Vec3 = EYE): number {
   let best = -Infinity;
   for (const r of ridges) {
     const pts = r.points.map(([x, y]): Sight => {
       const p: Vec3 = [x, y, r.z];
-      return { az: azimuth(EYE, p), el: elevation(EYE, p) };
+      return { az: azimuth(eye, p), el: elevation(eye, p) };
     });
     for (let i = 1; i < pts.length; i++) {
       const a = pts[i - 1]!;
@@ -65,15 +65,15 @@ function ridgeElevation(ridges: Ridge[], az: number): number {
 }
 
 /** Highest rooftop elevation among the buildings covering an azimuth (-Infinity if none). */
-function roofElevation(city: Building[], az: number): number {
+function roofElevation(city: Building[], az: number, eye: Vec3 = EYE): number {
   let best = -Infinity;
   for (const b of city) {
     const [x, y, z] = b.position;
     const [w, h, d] = b.size;
     const corners = [-1, 1].flatMap((sx) => [-1, 1].map((sz): Vec3 => [x + (sx * w) / 2, y + h / 2, z + (sz * d) / 2]));
-    const azs = corners.map((c) => azimuth(EYE, c));
+    const azs = corners.map((c) => azimuth(eye, c));
     if (az < Math.min(...azs) || az > Math.max(...azs)) continue;
-    best = Math.max(best, ...corners.map((c) => elevation(EYE, c)));
+    best = Math.max(best, ...corners.map((c) => elevation(eye, c)));
   }
   return best;
 }
@@ -198,6 +198,35 @@ describe('the view through the window from the overview camera', () => {
         (col) => col.some((s) => s.el > s.ridge) && col.some((s) => s.el < s.ridge),
       );
       expect(crossed.length / columns.size).toBeGreaterThan(0.7);
+    });
+  });
+});
+
+describe('the view through the window from the window close-up', () => {
+  const eye = hotspotById('window').view.position;
+
+  describe.each([1, 7, 42, 1234])('seed %i', (seed) => {
+    const city = generateCity(seed);
+    const ridges = generateRidge(seed);
+    // From 0.85 m the opening spans ~70° of elevation, so a 9×9 grid (~9° steps) steps over
+    // the ridge band (a few degrees tall); 25×25 samples it at ~3°.
+    const sights = sightLines(eye, 25).map((s) => ({
+      ...s,
+      ridge: ridgeElevation(ridges, s.az, eye),
+      roof: roofElevation(city, s.az, eye),
+    }));
+
+    it('sees the ridge above the rooftops along every sight line', () => {
+      for (const s of sights) {
+        expect(s.ridge).toBeGreaterThan(-Infinity);
+        expect(s.ridge).toBeGreaterThan(s.roof);
+      }
+    });
+
+    it('shows rooftops, the ridge line and sky', () => {
+      expect(sights.some((s) => s.el < s.roof)).toBe(true);
+      expect(sights.some((s) => s.el > s.roof && s.el < s.ridge)).toBe(true);
+      expect(sights.some((s) => s.el > s.ridge)).toBe(true);
     });
   });
 });

@@ -284,7 +284,7 @@ function Whiteboard() {
 
 /**
  * Frame lining the opening (its bars reach 1 cm into the opening, so no face is coplanar with
- * the wall's), a cross of mullions, and faint glass that never takes a click.
+ * the wall's), a mullion and a transom, and faint glass that never takes a click.
  */
 function Window() {
   const { left, right, bottom, top } = OPENING;
@@ -302,10 +302,17 @@ function Window() {
       <Box size={[bar, h, lining.depth]} position={[left - out + bar / 2, cy, lining.z]} color={C.paper} />
       <Box size={[bar, h, lining.depth]} position={[right + out - bar / 2, cy, lining.z]} color={C.paper} />
       <Box size={[mullion, h, mullion]} position={[cx, cy, -3.0]} color={C.paper} />
-      <Box size={[w, mullion, mullion]} position={[cx, cy, -3.0]} color={C.paper} />
+      {/* Transom in the upper third: above eye level from the window view, clear of the ridge. */}
+      <Box size={[w, mullion, mullion]} position={[cx, top - h / 3, -3.0]} color={C.paper} />
+      {/* The glass never tints on hover (basic material, no Highlight) and never takes a ray. */}
       <mesh position={[cx, cy, -3.0]} raycast={() => null}>
         <boxGeometry args={[w, h, 0.006]} />
         <meshBasicMaterial color={C.glass} transparent opacity={0.15} depthWrite={false} />
+      </mesh>
+      {/* Invisible pick plane over the opening, so pointing at the view selects the window. */}
+      <mesh position={[cx, cy, -2.99]}>
+        <planeGeometry args={[w, h]} />
+        <meshBasicMaterial transparent opacity={0} colorWrite={false} depthWrite={false} />
       </mesh>
     </group>
   );
@@ -314,7 +321,6 @@ function Window() {
 function Decor() {
   return (
     <>
-      <Window />
       <group name="frame">
         <Box size={[0.03, 0.4, 0.5]} position={[-2.985, 1.65, 1.0]} color={C.ink} />
         <Box size={[0.01, 0.32, 0.42]} position={[-2.968, 1.65, 1.0]} color={C.accentSoft} />
@@ -350,6 +356,10 @@ const HITS: Partial<Record<HotspotId, { size: Vec3; position: Vec3 }>> = {
   pi: { size: [0.32, 0.22, 0.3], position: onDesk('pi', DESK_TOP + 0.08) },
   phone: { size: [0.3, 0.2, 0.34], position: onDesk('phone', DESK_TOP + 0.08) },
   mug: { size: [0.26, 0.28, 0.26], position: onDesk('mug', DESK_TOP + 0.1) },
+  window: {
+    size: [WINDOW.size[0] + 0.4, WINDOW.size[1] + 0.4, 0.2],
+    position: [WINDOW.center[0], WINDOW.center[1], -2.88],
+  },
 };
 
 export interface SceneProps {
@@ -397,6 +407,9 @@ export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSel
       </Clickable>
       <Clickable {...common} {...click('whiteboard')}>
         <Whiteboard />
+      </Clickable>
+      <Clickable {...common} {...click('window')}>
+        <Window />
       </Clickable>
       <Clickable {...common} id="lamp" onClick={onLamp}>
         <Lamp on={lampOn} />

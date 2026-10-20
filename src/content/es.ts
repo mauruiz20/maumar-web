@@ -180,6 +180,7 @@ export const es: Content = {
       pi: 'Raspberry Pi: servidor casero',
       phone: 'Teléfono: contacto y CV',
       mug: 'Taza: formación',
+      window: 'Ventana: vista',
     },
   },
 };

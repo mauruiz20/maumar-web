@@ -12,7 +12,7 @@ export interface CameraView {
   target: Vec3;
 }
 
-export type HotspotId = 'monitor' | 'bookshelf' | 'whiteboard' | 'pi' | 'phone' | 'mug';
+export type HotspotId = 'monitor' | 'bookshelf' | 'whiteboard' | 'pi' | 'phone' | 'mug' | 'window';
 export type ProjectId = Project['id'];
 
 /** What a hotspot shows. The text itself always comes from the en/es content objects. */
@@ -22,7 +22,14 @@ export type HotspotContent =
   | { kind: 'skills' }
   | { kind: 'project'; project: ProjectId }
   | { kind: 'contact' }
-  | { kind: 'education' };
+  | { kind: 'education' }
+  /** A visual pause: the camera moves, no panel or sheet opens. */
+  | { kind: 'view' };
+
+/** Every hotspot opens a content panel (or sheet) except a plain view. */
+export function hasPanel(content: HotspotContent): boolean {
+  return content.kind !== 'view';
+}
 
 export interface Hotspot {
   id: HotspotId;
@@ -105,10 +112,22 @@ export const HOTSPOTS: readonly Hotspot[] = [
     content: { kind: 'education' },
     marker: onDesk('mug', DESK_TOP + 0.22),
   },
+  {
+    id: 'window',
+    objects: ['window'],
+    // Standing at the window, 0.85 m from the glass, looking out and ~2.4° down. The frame
+    // falls just outside the view; the mullion and transom frame the city and the ridge.
+    view: {
+      position: [WINDOW.center[0], 1.6, -2.15],
+      target: [WINDOW.center[0], 1.43, -6.15],
+    },
+    content: { kind: 'view' },
+    marker: [WINDOW.center[0], WINDOW.center[1] + WINDOW.size[1] / 2 + 0.16, -2.95],
+  },
 ];
 
 /** Not clickable as hotspots. The lamp only toggles its light (an easter egg). */
-export const DECOR = ['lamp', 'window', 'plant', 'rug', 'frame'] as const;
+export const DECOR = ['lamp', 'plant', 'rug', 'frame'] as const;
 
 export interface Book {
   project: ProjectId;

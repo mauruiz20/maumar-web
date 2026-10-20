@@ -16,6 +16,9 @@ export function panelTitle(content: Content, what: HotspotContent): string {
       return content.contact.title;
     case 'education':
       return content.education.title;
+    case 'view':
+      // A view opens no panel (see hasPanel); its menu label is its only name.
+      return '';
   }
 }
 
@@ -107,6 +110,8 @@ export function PanelBody({ content, what, book, onBook }: BodyProps) {
           ))}
         </dl>
       );
+    case 'view':
+      return null;
     case 'project':
       return <ProjectBody content={content} id={what.project} />;
     case 'contact':

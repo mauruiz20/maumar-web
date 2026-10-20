@@ -27,7 +27,7 @@ The simple mode (phase 1) is the same content as plain HTML and is always one cl
 | Phone | Lifts towards the camera | Contact + CV download | Kenney or Quaternius |
 | Mug | Short zoom on the desk | Education: Computer Engineering, UNT, 2019–2023 | Kenney or Quaternius + logo decal |
 | Lamp | Toggles on/off | Easter egg, or light/dark theme toggle | Kenney |
-| Window | — | Decoration: low-poly city and mountains outside (daytime) | Generated in code |
+| Window | Camera moves to the window | No panel: the city and mountains outside | Generated in code |
 | Plant, rug, frame | — | Visual filler, not clickable | Kenney |
 
 The mug carries a decal (transparent PNG) of the real "Ingeniería en Computación" mug logo.
@@ -96,7 +96,8 @@ and returns focus to the "View the 3D room" button.
 overview; a hotspot click tweens camera and target with GSAP (1 s, `power2.inOut`; instant
 under `prefers-reduced-motion`); Escape or "Back" returns. The HTML object menu lists every
 hotspot plus the lamp toggle. The monitor shows the CV as real HTML (drei `<Html transform
-occlude>`); every other view opens a side panel, and on touch screens everything opens in
+occlude>`); the window view (`{ kind: 'view' }`) opens nothing, focus waits on Back; every
+other view opens a side panel, and on touch screens everything opens in
 a bottom sheet, with pulsing markers, larger invisible hit areas, dpr [1, 1.5] and a wider
 portrait camera. Desktop dpr is [1, 2]; no post-processing, no shadows yet.
 

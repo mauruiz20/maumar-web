@@ -2,7 +2,7 @@ import { Canvas } from '@react-three/fiber';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Content } from '../content/profile';
 import { CameraRig, FOV } from './CameraRig';
-import { HOTSPOTS, OVERVIEW, OVERVIEW_PORTRAIT, hotspotById, type HotspotId, type ProjectId } from './hotspots';
+import { HOTSPOTS, OVERVIEW, OVERVIEW_PORTRAIT, hasPanel, hotspotById, type HotspotId, type ProjectId } from './hotspots';
 import { PanelBody, panelTitle } from './panels';
 import { Scene, type TargetId } from './Scene';
 
@@ -24,6 +24,7 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
 
   const menuButtons = useRef(new Map<HotspotId, HTMLButtonElement>());
   const panelHeading = useRef<HTMLHeadingElement>(null);
+  const backButton = useRef<HTMLButtonElement>(null);
   const lastActive = useRef<HotspotId | null>(null);
 
   const select = useCallback((id: HotspotId) => setActive(id), []);
@@ -46,8 +47,10 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
   useEffect(() => {
     if (active) {
       lastActive.current = active;
-      // The monitor screen focuses itself when it mounts (see Scene).
-      panelHeading.current?.focus({ preventScroll: true });
+      // The monitor screen focuses itself when it mounts (see Scene). A view without a
+      // panel (the window) has nothing to read, so focus waits on Back.
+      if (hasPanel(hotspotById(active).content)) panelHeading.current?.focus({ preventScroll: true });
+      else backButton.current?.focus({ preventScroll: true });
       return;
     }
     const previous = lastActive.current;
@@ -55,7 +58,8 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
   }, [active]);
 
   const hotspot = active ? hotspotById(active) : null;
-  const showPanel = hotspot && (coarse || hotspot.id !== 'monitor');
+  // No panel (nor bottom sheet) for a plain view; on desktop the monitor shows the CV itself.
+  const showPanel = hotspot && hasPanel(hotspot.content) && (coarse || hotspot.id !== 'monitor');
   const overview = portrait ? OVERVIEW_PORTRAIT : OVERVIEW;
 
   return (
@@ -122,7 +126,7 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
       </nav>
 
       {hotspot && (
-        <button type="button" className="room-back" onClick={back}>
+        <button type="button" className="room-back" ref={backButton} onClick={back}>
           <span aria-hidden="true">←</span> {room.back}
         </button>
       )}
