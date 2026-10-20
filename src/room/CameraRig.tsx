@@ -6,6 +6,9 @@ import { Vector3, type PerspectiveCamera } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { FOV, OVERVIEW, OVERVIEW_PORTRAIT, panelShift, viewFor, type CameraView, type Hotspot, type PanelKind } from './hotspots';
 
+/** Anything the camera can frame besides the overview: a hotspot or the desk group view. */
+export type Framing = Pick<Hotspot, 'view' | 'portraitView'>;
+
 export { FOV };
 
 /** Spherical angles of the overview camera around its target, for the orbit limits. */
@@ -20,8 +23,8 @@ function anglesOf(view: CameraView) {
 }
 
 interface Props {
-  /** The active hotspot, or null for the overview. */
-  hotspot: Hotspot | null;
+  /** The active hotspot or the desk view, or null for the overview. */
+  framing: Framing | null;
   reducedMotion: boolean;
   /** An HTML panel covering part of the canvas: the framed object shifts away from it. */
   panel: PanelKind | null;
@@ -32,7 +35,7 @@ interface Props {
  * Hotspot views: controls off, GSAP tweens the camera and its look-at target (~1 s),
  * or cuts instantly under prefers-reduced-motion.
  */
-export function CameraRig({ hotspot, reducedMotion, panel }: Props) {
+export function CameraRig({ framing, reducedMotion, panel }: Props) {
   const controls = useRef<OrbitControlsImpl>(null);
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
   const size = useThree((s) => s.size);
@@ -40,7 +43,7 @@ export function CameraRig({ hotspot, reducedMotion, panel }: Props) {
   const shift = useRef({ x: 0, y: 0 });
   const overview = portrait ? OVERVIEW_PORTRAIT : OVERVIEW;
   // Portrait canvases use each hotspot's portrait view (framed above the bottom sheet).
-  const view = hotspot ? viewFor(hotspot, size.width / size.height) : null;
+  const view = framing ? viewFor(framing, size.width / size.height) : null;
   const { azimuth, polar, distance } = anglesOf(overview);
 
   useEffect(() => {

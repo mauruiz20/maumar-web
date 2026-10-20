@@ -47,6 +47,9 @@ The window view is daytime only; a night variant (lit windows, dark sky) is a fu
   WebGL availability.
 - Opt-in 3D on phones:
   - No hover: show visible pulsing markers on every clickable object.
+  - The four desk objects share one "Desk" marker in the overview; it opens a desk view
+    (no panel) where their own markers spread out. Back from a desk object opened there returns
+    to the desk view; from the object menu it returns to the overview (`nav.ts`).
   - Invisible hit areas larger than the models (the Pi and the mug are tiny).
   - Camera FOV and position adapt to the aspect ratio (portrait frames the room differently).
   - Each hotspot has a portrait view (`viewFor(hotspot, aspect)`): the object sits in the upper
@@ -116,6 +119,7 @@ portrait camera. Desktop dpr is [1, 2]; no post-processing, no shadows yet.
 | `src/room/Scene.tsx` | Blockout primitives, hover highlight, markers, monitor `<Html>` |
 | `src/room/CameraRig.tsx` | Orbit limits, GSAP camera moves, panel-aware framing |
 | `src/room/hotspots.ts` | Hotspots as data: objects, camera views, content, markers, books |
+| `src/room/nav.ts`, `menu.ts` | Back stack, desk group and which touch markers show; object menu layout |
 | `src/room/city.ts`, `Outside.tsx` | Seeded city and mountain generators (pure, tested); the view through the window, drawn only inside a stencil mask of the opening |
 | `src/room/panels.tsx` | Renders hotspot content from the en/es content objects |
 | `src/room/palette.ts`, `room.css` | Blockout colours; room UI styles (site tokens) |

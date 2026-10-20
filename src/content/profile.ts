@@ -108,6 +108,8 @@ export interface RoomUi {
   hint: string;
   /** The collapsed object menu's button. */
   objects: string;
+  /** Touch marker that opens the desk group view (visual label only). */
+  desk: string;
   hotspots: Record<HotspotId, string>;
 }
 

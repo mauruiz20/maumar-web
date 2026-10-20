@@ -2,7 +2,8 @@ import { Html } from '@react-three/drei';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
 import { createContext, useContext, useEffect, type ReactNode, type RefObject } from 'react';
 import type { Content } from '../content/profile';
-import { BOOKS, DESK, DESK_TOP, HOTSPOTS, WINDOW, onDesk, type HotspotId, type ProjectId, type Vec3 } from './hotspots';
+import { BOOKS, DESK, DESK_TOP, WINDOW, onDesk, type HotspotId, type ProjectId, type Vec3 } from './hotspots';
+import type { MarkerId } from './nav';
 import { Outside } from './Outside';
 import { ExperienceBody } from './panels';
 import { PALETTE as C } from './palette';
@@ -340,23 +341,32 @@ function Decor() {
 }
 
 /**
- * Pulsing tap markers over every clickable object (touch screens have no hover). They render
- * into a fixed layer next to the canvas: with drei's default target, the first marker's DOM
- * root was replaced when R3F connected its events and that marker (the monitor's) never showed.
+ * Pulsing tap markers (touch screens have no hover): which ones show, and where, comes from
+ * nav.ts. They render into a fixed layer next to the canvas: with drei's default target, the
+ * first marker's DOM root was replaced when R3F connected its events and it never showed.
  */
-function Markers({ onSelect, layer }: { onSelect: (id: HotspotId) => void; layer: RefObject<HTMLDivElement | null> }) {
+interface MarkersProps {
+  markers: { id: MarkerId; position: Vec3 }[];
+  onMarker: (id: MarkerId) => void;
+  deskLabel: string;
+  layer: RefObject<HTMLDivElement | null>;
+}
+
+function Markers({ markers, onMarker, deskLabel, layer }: MarkersProps) {
   return (
     <>
-      {HOTSPOTS.map((h) => (
-        <Html key={h.id} position={h.marker} center zIndexRange={[6, 0]} portal={layer as RefObject<HTMLElement>}>
+      {markers.map((m) => (
+        <Html key={m.id} position={m.position} center zIndexRange={[6, 0]} portal={layer as RefObject<HTMLElement>}>
           <button
             type="button"
             className="room-marker"
-            data-hotspot={h.id}
+            data-hotspot={m.id}
             tabIndex={-1}
             aria-hidden="true"
-            onClick={() => onSelect(h.id)}
-          />
+            onClick={() => onMarker(m.id)}
+          >
+            {m.id === 'desk' && <span className="room-marker-label">{deskLabel}</span>}
+          </button>
         </Html>
       ))}
     </>
@@ -385,9 +395,13 @@ export interface SceneProps {
   onLamp: () => void;
   /** Element the touch markers render into. */
   markerLayer: RefObject<HTMLDivElement | null>;
+  /** Touch markers to show now (empty on desktop and inside hotspot views). */
+  markers: MarkersProps['markers'];
+  onMarker: (id: MarkerId) => void;
+  deskLabel: string;
 }
 
-export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSelect, onBook, onLamp, markerLayer }: SceneProps) {
+export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSelect, onBook, onLamp, markerLayer, markers, onMarker, deskLabel }: SceneProps) {
   const gl = useThree((s) => s.gl);
   useEffect(() => {
     gl.domElement.style.cursor = hovered ? 'pointer' : '';
@@ -429,7 +443,7 @@ export function Scene({ content, coarse, active, hovered, lampOn, onHover, onSel
       </Clickable>
       <Decor />
       <Outside />
-      {coarse && !active && <Markers onSelect={onSelect} layer={markerLayer} />}
+      {markers.length > 0 && <Markers markers={markers} onMarker={onMarker} deskLabel={deskLabel} layer={markerLayer} />}
     </>
   );
 }

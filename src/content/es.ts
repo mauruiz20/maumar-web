@@ -174,6 +174,7 @@ export const es: Content = {
     lamp: 'Lámpara de escritorio',
     hint: 'Hacé clic en un objeto o elegí uno de esta lista.',
     objects: 'Objetos',
+    desk: 'Escritorio',
     hotspots: {
       monitor: 'Monitor: experiencia',
       bookshelf: 'Biblioteca: proyectos',

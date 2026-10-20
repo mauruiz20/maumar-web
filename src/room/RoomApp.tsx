@@ -4,6 +4,7 @@ import type { Content } from '../content/profile';
 import { CameraRig } from './CameraRig';
 import { FOV, HOTSPOTS, OVERVIEW, OVERVIEW_PORTRAIT, hasPanel, hotspotById, type HotspotId, type ProjectId } from './hotspots';
 import { MENU_COMPACT_WIDTH, menuLayout } from './menu';
+import { DESK_VIEW, markerPosition, navigate, placeOf, visibleMarkers, type MarkerId, type NavAction, type NavStack } from './nav';
 import { PanelBody, panelTitle } from './panels';
 import { Scene, type TargetId } from './Scene';
 
@@ -17,7 +18,10 @@ export interface RoomAppProps {
 
 export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProps) {
   const { room } = content;
-  const [active, setActive] = useState<HotspotId | null>(null);
+  // Back stack of places (see nav.ts): empty is the overview.
+  const [stack, setStack] = useState<NavStack>([]);
+  const place = placeOf(stack);
+  const active: HotspotId | null = place === 'overview' || place === 'desk' ? null : place;
   const [hovered, setHovered] = useState<TargetId | null>(null);
   const [book, setBook] = useState<ProjectId>('turnero');
   const [lampOn, setLampOn] = useState(true);
@@ -32,18 +36,26 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
   const markerLayer = useRef<HTMLDivElement>(null);
   const lastActive = useRef<HotspotId | null>(null);
 
-  const select = useCallback((id: HotspotId) => {
+  const go = useCallback((action: NavAction) => {
     setMenuOpen(false);
-    setActive(id);
+    setStack((s) => navigate(s, action));
   }, []);
-  const back = useCallback(() => {
-    setMenuOpen(false);
-    setActive(null);
-  }, []);
-  const selectBook = useCallback((id: ProjectId) => {
-    setBook(id);
-    setActive('bookshelf');
-  }, []);
+  /** From the object menu: always direct, so Back returns to the overview. */
+  const select = useCallback((id: HotspotId) => go({ type: 'open', id, source: 'menu' }), [go]);
+  /** From the scene or a tap marker: desk objects opened in the desk view go back to it. */
+  const selectInScene = useCallback((id: HotspotId) => go({ type: 'open', id, source: 'scene' }), [go]);
+  const onMarker = useCallback(
+    (id: MarkerId) => (id === 'desk' ? go({ type: 'desk' }) : selectInScene(id)),
+    [go, selectInScene],
+  );
+  const back = useCallback(() => go({ type: 'back' }), [go]);
+  const selectBook = useCallback(
+    (id: ProjectId) => {
+      setBook(id);
+      selectInScene('bookshelf');
+    },
+    [selectInScene],
+  );
 
   useEffect(() => {
     const query = window.matchMedia(`(max-width: ${MENU_COMPACT_WIDTH - 1}px)`);
@@ -53,8 +65,8 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
     return () => query.removeEventListener('change', update);
   }, []);
 
-  // Escape closes the open object list first, then returns to the overview (it never closes
-  // the room).
+  // Escape closes the open object list first, then goes Back one place (it never closes the
+  // room).
   const menuOpenRef = useRef(menuOpen);
   menuOpenRef.current = menuOpen;
   useEffect(() => {
@@ -63,7 +75,7 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
       if (menuOpenRef.current) {
         setMenuOpen(false);
         menuToggle.current?.focus({ preventScroll: true });
-      } else setActive(null);
+      } else setStack((s) => navigate(s, { type: 'back' }));
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -71,6 +83,10 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
 
   // Focus follows the view: into the content when it opens, back to its menu item after.
   useEffect(() => {
+    if (place === 'desk') {
+      backButton.current?.focus({ preventScroll: true });
+      return;
+    }
     if (active) {
       lastActive.current = active;
       // The monitor screen focuses itself when it mounts (see Scene). A view without a
@@ -85,15 +101,17 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
     const item = menuButtons.current.get(previous);
     if (item && item.offsetParent !== null) item.focus({ preventScroll: true });
     else menuToggle.current?.focus({ preventScroll: true });
-  }, [active]);
+  }, [place, active]);
 
   const hotspot = active ? hotspotById(active) : null;
   // No panel (nor bottom sheet) for a plain view; on desktop the monitor shows the CV itself.
   const showPanel = hotspot && hasPanel(hotspot.content) && (coarse || hotspot.id !== 'monitor');
   const overview = portrait ? OVERVIEW_PORTRAIT : OVERVIEW;
-  const layout = menuLayout({ compact: coarse || narrow, inView: active !== null });
+  const inView = place !== 'overview';
+  const layout = menuLayout({ compact: coarse || narrow, inView });
+  const markers = visibleMarkers({ compact: coarse, place }).map((id) => ({ id, position: markerPosition(id, place) }));
   const listShown = layout === 'list' || menuOpen;
-  const menuClass = ['room-menu', layout === 'button' && 'is-collapsed', menuOpen && 'is-open', active && 'in-view']
+  const menuClass = ['room-menu', layout === 'button' && 'is-collapsed', menuOpen && 'is-open', inView && 'in-view']
     .filter(Boolean)
     .join(' ');
 
@@ -122,13 +140,16 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
             hovered={hovered}
             lampOn={lampOn}
             onHover={setHovered}
-            onSelect={select}
+            onSelect={selectInScene}
             onBook={selectBook}
+            markers={markers}
+            onMarker={onMarker}
+            deskLabel={room.desk}
             onLamp={() => setLampOn((on) => !on)}
             markerLayer={markerLayer}
           />
           <CameraRig
-            hotspot={hotspot}
+            framing={place === 'desk' ? DESK_VIEW : hotspot}
             reducedMotion={reducedMotion}
             panel={showPanel ? (coarse ? 'sheet' : 'side') : null}
           />
@@ -137,7 +158,7 @@ export function RoomApp({ content, coarse, reducedMotion, onReady }: RoomAppProp
         <div className="room-markers" ref={markerLayer} />
       </div>
 
-      {hotspot && (
+      {inView && (
         <button type="button" className="room-back" ref={backButton} onClick={back}>
           <span aria-hidden="true">←</span> {room.back}
         </button>

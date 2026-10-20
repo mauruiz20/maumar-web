@@ -174,6 +174,7 @@ export const en: Content = {
     lamp: 'Desk lamp',
     hint: 'Click an object, or pick one from this list.',
     objects: 'Objects',
+    desk: 'Desk',
     hotspots: {
       monitor: 'Monitor: experience',
       bookshelf: 'Bookshelf: projects',
